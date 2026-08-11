@@ -2,8 +2,8 @@
   "users": [
     {
       "id": 1,
-      "username": "admin",
-      "password_hash": "$2a$10$4J9UtAmjopPbZ1Q3La9isedoswFNrnBfLpekmIsEdUycxYTwX6BLW",
+      "username": "iic student",
+      "password_hash": "$2a$10$xkqHkBolm7Pq511cAMXjLeo.xLak3kZIL2AihG/6u6o.7r40LyvKC",
       "role": "admin"
     }
   ],

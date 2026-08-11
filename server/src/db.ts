@@ -503,11 +503,11 @@ export async function initDatabase() {
 // Seed helper for PostgreSQL
 async function seedDatabase() {
   console.log('Seeding PostgreSQL database with demo data for Circuit Arena: The Finals...');
-  const adminHash = bcrypt.hashSync('admin123', 10);
+  const adminHash = bcrypt.hashSync('iic@2026', 10);
   const teamHash = bcrypt.hashSync('team123', 10);
   const viewerHash = bcrypt.hashSync('viewer123', 10);
 
-  const adminUser = await query('INSERT INTO users (username, password_hash, role) VALUES ($1, $2, $3) RETURNING id', ['admin', adminHash, 'admin']);
+  const adminUser = await query('INSERT INTO users (username, password_hash, role) VALUES ($1, $2, $3) RETURNING id', ['iic student', adminHash, 'admin']);
   const team1User = await query('INSERT INTO users (username, password_hash, role) VALUES ($1, $2, $3) RETURNING id', ['teama', teamHash, 'team']);
   const team2User = await query('INSERT INTO users (username, password_hash, role) VALUES ($1, $2, $3) RETURNING id', ['teamb', teamHash, 'team']);
   const team3User = await query('INSERT INTO users (username, password_hash, role) VALUES ($1, $2, $3) RETURNING id', ['teamc', teamHash, 'team']);
@@ -532,12 +532,12 @@ async function seedDatabase() {
 function initFallbackSchema() {
   if (fallbackData.users.length === 0) {
     console.log('Seeding fallback JSON database file with demo data for Circuit Arena: The Finals...');
-    const adminHash = bcrypt.hashSync('admin123', 10);
+    const adminHash = bcrypt.hashSync('iic@2026', 10);
     const teamHash = bcrypt.hashSync('team123', 10);
     const viewerHash = bcrypt.hashSync('viewer123', 10);
 
     fallbackData.users = [
-      { id: 1, username: 'admin', password_hash: adminHash, role: 'admin' },
+      { id: 1, username: 'iic student', password_hash: adminHash, role: 'admin' },
       { id: 2, username: 'teama', password_hash: teamHash, role: 'team' },
       { id: 3, username: 'teamb', password_hash: teamHash, role: 'team' },
       { id: 4, username: 'teamc', password_hash: teamHash, role: 'team' },
