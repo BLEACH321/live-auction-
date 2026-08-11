@@ -141,7 +141,12 @@ function querySimulator(text: string, params: any[] = []): { rows: any[] } {
     const item = fallbackData.auction_items.find(i => i.id === id);
     return { rows: item ? [item] : [] };
   }
-
+  // Find item by name
+  if (queryClean.includes('FROM auction_items WHERE name = $1')) {
+    const name = params[0];
+    const item = fallbackData.auction_items.find(i => i.name === name);
+    return { rows: item ? [item] : [] };
+  }
   // 11. Find MAX order_index
   if (queryClean.includes('SELECT MAX(order_index) FROM auction_items')) {
     const maxVal = fallbackData.auction_items.reduce((max, item) => Math.max(max, item.order_index || 0), 0);
@@ -471,6 +476,24 @@ function querySimulator(text: string, params: any[] = []): { rows: any[] } {
     return { rows: list };
   }
 
+  // Update Item complete
+  if (queryClean.includes('UPDATE auction_items SET base_price = $1, stock = $2, image_url = $3 WHERE id = $4')) {
+    const basePrice = Number(params[0]);
+    const stock = Number(params[1]);
+    const imageUrl = params[2];
+    const id = Number(params[3]);
+    const item = fallbackData.auction_items.find(i => i.id === id);
+    if (item) {
+      item.base_price = basePrice;
+      item.stock = stock;
+      if (imageUrl !== null && imageUrl !== undefined && imageUrl !== '') {
+        item.image_url = imageUrl;
+      }
+      saveFallback();
+    }
+    return { rows: [] };
+  }
+
   console.warn(`[Query Simulator] Unhandled query pattern. Returning empty rows: "${queryClean}"`);
   return { rows: [] };
 }
@@ -589,11 +612,11 @@ async function seedDatabase() {
   await query('INSERT INTO teams (user_id, name, initial_budget, remaining_budget, total_spent) VALUES ($1, $2, $3, $4, 0.00)', [team2User.rows[0].id, 'Team Beta', 2000.00, 2000.00]);
   await query('INSERT INTO teams (user_id, name, initial_budget, remaining_budget, total_spent) VALUES ($1, $2, $3, $4, 0.00)', [team3User.rows[0].id, 'Team Gamma', 2000.00, 2000.00]);
 
-  await query("INSERT INTO auction_items (name, image_url, base_price, status, order_index, stock) VALUES ('Servo Motor', 'https://images.unsplash.com/photo-1614064641938-3bbee52942c7?w=400&q=80', 200.00, 'pending', 1, 5)");
-  await query("INSERT INTO auction_items (name, image_url, base_price, status, order_index, stock) VALUES ('Ultrasonic Sensor', 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=400&q=80', 150.00, 'pending', 2, 5)");
-  await query("INSERT INTO auction_items (name, image_url, base_price, status, order_index, stock) VALUES ('Raspberry Pi Pico', 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=400&q=80', 400.00, 'pending', 3, 5)");
-  await query("INSERT INTO auction_items (name, image_url, base_price, status, order_index, stock) VALUES ('Arduino Uno', 'https://images.unsplash.com/photo-1591799264318-7e6ef8ddb7ea?w=400&q=80', 300.00, 'pending', 4, 5)");
-  await query("INSERT INTO auction_items (name, image_url, base_price, status, order_index, stock) VALUES ('16x2 LCD Display', 'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=400&q=80', 100.00, 'pending', 5, 5)");
+  await query("INSERT INTO auction_items (name, image_url, base_price, status, order_index, stock) VALUES ('Transistors (PNP & NPN)', 'https://docs.google.com/uc?export=view&id=1ziSqU-ZJK95Fj5oHgrfh-6Y-6uxALYXY', 100.00, 'pending', 1, 10)");
+  await query("INSERT INTO auction_items (name, image_url, base_price, status, order_index, stock) VALUES ('sensor', 'https://docs.google.com/uc?export=view&id=12DKA3eAN5tkrZqRiB3MkBVxT2fC3OF3C', 300.00, 'pending', 2, 6)");
+  await query("INSERT INTO auction_items (name, image_url, base_price, status, order_index, stock) VALUES ('Relays', 'https://docs.google.com/uc?export=view&id=1GBs_U3ZuDfvKxyN-zlUe6pLyamgVywyM', 500.00, 'pending', 3, 3)");
+  await query("INSERT INTO auction_items (name, image_url, base_price, status, order_index, stock) VALUES ('IC', 'https://docs.google.com/uc?export=view&id=1Du8noFEuUQMgVV3DdJTIG5zrCXTSwmqq', 250.00, 'pending', 4, 9)");
+  await query("INSERT INTO auction_items (name, image_url, base_price, status, order_index, stock) VALUES ('Breadboard', 'https://docs.google.com/uc?export=view&id=1NYwZtdlwwuaN75Cc1gZGTSOyxK7qDM_y', 500.00, 'pending', 5, 6)");
 
   const initialState = { status: 'idle', currentItemId: null, timer: 0, highestBid: null, highestBidderTeamId: null, highestBidderName: null };
   await query("INSERT INTO auction_state (key, value) VALUES ($1, $2)", ['current_state', JSON.stringify(initialState)]);
@@ -623,11 +646,11 @@ function initFallbackSchema() {
     ];
 
     fallbackData.auction_items = [
-      { id: 1, name: 'Servo Motor', image_url: 'https://images.unsplash.com/photo-1614064641938-3bbee52942c7?w=400&q=80', base_price: 200.00, status: 'pending', winning_team_id: null, final_price: null, order_index: 1, stock: 5 },
-      { id: 2, name: 'Ultrasonic Sensor', image_url: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=400&q=80', base_price: 150.00, status: 'pending', winning_team_id: null, final_price: null, order_index: 2, stock: 5 },
-      { id: 3, name: 'Raspberry Pi Pico', image_url: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=400&q=80', base_price: 400.00, status: 'pending', winning_team_id: null, final_price: null, order_index: 3, stock: 5 },
-      { id: 4, name: 'Arduino Uno', image_url: 'https://images.unsplash.com/photo-1591799264318-7e6ef8ddb7ea?w=400&q=80', base_price: 300.00, status: 'pending', winning_team_id: null, final_price: null, order_index: 4, stock: 5 },
-      { id: 5, name: '16x2 LCD Display', image_url: 'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=400&q=80', base_price: 100.00, status: 'pending', winning_team_id: null, final_price: null, order_index: 5, stock: 5 },
+      { id: 1, name: 'Transistors (PNP & NPN)', image_url: 'https://docs.google.com/uc?export=view&id=1ziSqU-ZJK95Fj5oHgrfh-6Y-6uxALYXY', base_price: 100.00, status: 'pending', winning_team_id: null, final_price: null, order_index: 1, stock: 10 },
+      { id: 2, name: 'sensor', image_url: 'https://docs.google.com/uc?export=view&id=12DKA3eAN5tkrZqRiB3MkBVxT2fC3OF3C', base_price: 300.00, status: 'pending', winning_team_id: null, final_price: null, order_index: 2, stock: 6 },
+      { id: 3, name: 'Relays', image_url: 'https://docs.google.com/uc?export=view&id=1GBs_U3ZuDfvKxyN-zlUe6pLyamgVywyM', base_price: 500.00, status: 'pending', winning_team_id: null, final_price: null, order_index: 3, stock: 3 },
+      { id: 4, name: 'IC', image_url: 'https://docs.google.com/uc?export=view&id=1Du8noFEuUQMgVV3DdJTIG5zrCXTSwmqq', base_price: 250.00, status: 'pending', winning_team_id: null, final_price: null, order_index: 4, stock: 9 },
+      { id: 5, name: 'Breadboard', image_url: 'https://docs.google.com/uc?export=view&id=1NYwZtdlwwuaN75Cc1gZGTSOyxK7qDM_y', base_price: 500.00, status: 'pending', winning_team_id: null, final_price: null, order_index: 5, stock: 6 },
     ];
 
     fallbackData.auction_state = {

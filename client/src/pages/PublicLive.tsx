@@ -131,9 +131,14 @@ export const PublicLive: React.FC = () => {
               <h2 className="text-4xl font-display font-black text-white tracking-wider leading-tight uppercase">
                 {activeItem.name}
               </h2>
-              <p className="text-xs text-arena-textMuted font-mono uppercase tracking-wider">
-                STARTING RESERVE: <span className="text-slate-200 font-bold font-sans">{activeItem.base_price} Circuit Coins</span>
-              </p>
+              <div className="flex flex-wrap gap-x-6 gap-y-2 items-center">
+                <span className="text-sm font-bold text-arena-glowGreen bg-arena-glowGreen/10 border border-arena-glowGreen/20 px-2.5 py-0.5 rounded">
+                  QUANTITY: {activeItem.stock}
+                </span>
+                <p className="text-xs text-arena-textMuted font-mono uppercase tracking-wider">
+                  STARTING RESERVE: <span className="text-slate-200 font-bold font-sans">{activeItem.base_price} Circuit Coins</span>
+                </p>
+              </div>
             </div>
 
             {/* Display large item graphic */}

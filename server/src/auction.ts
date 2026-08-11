@@ -305,16 +305,18 @@ function startCountdown() {
 export function initAuction(io: Server) {
   ioInstance = io;
 
-  // Socket middleware for authorization
+  // Socket middleware for authorization (optional for viewers/guests)
   io.use((socket, next) => {
     const token = socket.handshake.auth.token;
     if (!token) {
-      return next(new Error('Authentication error: Token missing'));
+      socket.data.user = { role: 'viewer', username: 'guest' };
+      return next();
     }
 
     jwt.verify(token, JWT_SECRET, (err: any, decoded: any) => {
       if (err) {
-        return next(new Error('Authentication error: Invalid token'));
+        socket.data.user = { role: 'viewer', username: 'guest' };
+        return next();
       }
       socket.data.user = decoded;
       next();

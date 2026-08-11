@@ -17,18 +17,9 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
-    if (!token) {
-      if (socket) {
-        socket.disconnect();
-        setSocket(null);
-        setConnected(false);
-      }
-      return;
-    }
-
-    // Connect to Socket.IO server with token
+    // Connect to Socket.IO server (optional token for viewers/guests)
     const newSocket = io(API_URL, {
-      auth: { token },
+      auth: { token: token || null },
       transports: ['websocket'], // Prefer WebSockets
     });
 
@@ -45,7 +36,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     newSocket.on('connect_error', (err) => {
       console.error('Socket connection error:', err.message);
       setConnected(false);
-      if (err.message.includes('Authentication error')) {
+      if (err.message.includes('Authentication error') && token) {
         // If auth fails, force logout the client
         logout();
       }

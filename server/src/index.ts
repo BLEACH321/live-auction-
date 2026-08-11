@@ -208,23 +208,39 @@ app.post('/api/admin/items', authenticateToken, requireRole('admin'), async (req
   }
 
   try {
-    // Get max order index
-    const maxOrderRes = await query('SELECT MAX(order_index) FROM auction_items');
-    const nextOrder = (maxOrderRes.rows[0].max || 0) + 1;
+    const existingRes = await query('SELECT * FROM auction_items WHERE name = $1', [name]);
+    
+    if (existingRes.rows.length > 0) {
+      const existing = existingRes.rows[0];
+      // Preserve existing image if no new image is provided
+      const finalImage = imageUrl || existing.image_url;
+      
+      await query(
+        'UPDATE auction_items SET base_price = $1, stock = $2, image_url = $3 WHERE id = $4',
+        [price, qty, finalImage || null, existing.id]
+      );
+    } else {
+      // Get max order index
+      const maxOrderRes = await query('SELECT MAX(order_index) FROM auction_items');
+      const nextOrder = (maxOrderRes.rows[0].max || 0) + 1;
 
-    await query(
-      'INSERT INTO auction_items (name, image_url, base_price, status, order_index, stock) VALUES ($1, $2, $3, $4, $5, $6)',
-      [name, imageUrl || null, price, 'pending', nextOrder, qty]
-    );
+      await query(
+        'INSERT INTO auction_items (name, image_url, base_price, status, order_index, stock) VALUES ($1, $2, $3, $4, $5, $6)',
+        [name, imageUrl || null, price, 'pending', nextOrder, qty]
+      );
+    }
 
     // Notify clients of item list change
     const allItems = await query('SELECT * FROM auction_items ORDER BY order_index ASC, id ASC');
     io.emit('items:update', allItems.rows);
 
-    return res.status(201).json({ success: true, message: 'Auction item added successfully' });
+    return res.status(existingRes.rows.length > 0 ? 200 : 201).json({ 
+      success: true, 
+      message: existingRes.rows.length > 0 ? 'Auction item updated successfully' : 'Auction item added successfully' 
+    });
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: 'Failed to add item' });
+    return res.status(500).json({ error: 'Failed to save item' });
   }
 });
 

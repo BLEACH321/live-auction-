@@ -407,6 +407,25 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
+  // Resolve image URLs, Google Drive links, and local filenames
+  const resolveImageUrl = (url: string): string => {
+    if (!url) return '';
+    // Check if it is a Google Drive URL
+    const driveMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    if (driveMatch && driveMatch[1]) {
+      return `https://docs.google.com/uc?export=view&id=${driveMatch[1]}`;
+    }
+    // Check if it's already an absolute HTTP/HTTPS URL
+    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
+      return url;
+    }
+    // If it's a relative path or filename, make sure it is relative to root
+    if (url.startsWith('/')) {
+      return url;
+    }
+    return `/${url}`;
+  };
+
   // Bulk Component Upload logic
   const parseItemCSV = (text: string) => {
     const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
@@ -429,7 +448,7 @@ export const AdminDashboard: React.FC = () => {
       if (row.length < 2) continue;
       results.push({
         name: row[nameIdx] || '',
-        imageUrl: imageIdx !== -1 && row[imageIdx] ? row[imageIdx] : null,
+        imageUrl: imageIdx !== -1 && row[imageIdx] ? resolveImageUrl(row[imageIdx]) : null,
         basePrice: Number(row[priceIdx] || 0),
         stock: stockIdx !== -1 && row[stockIdx] ? Number(row[stockIdx]) : 1
       });
@@ -444,7 +463,7 @@ export const AdminDashboard: React.FC = () => {
     }
     return data.map((item: any) => ({
       name: item.name || '',
-      imageUrl: item.imageUrl || item.image || null,
+      imageUrl: item.imageUrl || item.image ? resolveImageUrl(item.imageUrl || item.image) : null,
       basePrice: Number(item.basePrice || item.price || 0),
       stock: Number(item.stock || item.qty || item.quantity || 1)
     }));
