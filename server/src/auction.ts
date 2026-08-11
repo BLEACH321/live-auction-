@@ -13,6 +13,8 @@ let state: LiveAuctionState = {
   highestBid: null,
   highestBidderTeamId: null,
   highestBidderName: null,
+  bidDeadline: null,
+  initialDuration: 30,
 };
 
 let activeItemBasePrice: number = 0;
@@ -99,6 +101,7 @@ export async function loadStateFromDb() {
       // If it was running, we set it to paused so it doesn't run with dead intervals
       if (state.status === 'running') {
         state.status = 'paused';
+        state.bidDeadline = null;
       }
 
       // Restore active item base price if item is set
@@ -165,22 +168,41 @@ async function handleTimerExpiry() {
         [winningBid, teamId]
       );
 
-      // Update item status
-      await query(
-        `UPDATE auction_items 
-         SET status = 'sold', 
-             winning_team_id = $1, 
-             final_price = $2 
-         WHERE id = $3`,
-        [teamId, winningBid, itemId]
-      );
-
-      // Insert purchase log
+      // Insert purchase log first
       await query(
         `INSERT INTO purchases (item_id, team_id, price) 
          VALUES ($1, $2, $3)`,
         [itemId, teamId, winningBid]
       );
+
+      // Check remaining stock
+      const itemRes = await query('SELECT stock FROM auction_items WHERE id = $1', [itemId]);
+      const totalStock = itemRes.rows[0]?.stock || 1;
+      
+      const purchaseCountRes = await query('SELECT COUNT(*) FROM purchases WHERE item_id = $1', [itemId]);
+      const purchaseCount = parseInt(purchaseCountRes.rows[0].count, 10);
+
+      if (purchaseCount >= totalStock) {
+        // All stock sold out! Mark as sold
+        await query(
+          `UPDATE auction_items 
+           SET status = 'sold', 
+               winning_team_id = $1, 
+               final_price = $2 
+           WHERE id = $3`,
+          [teamId, winningBid, itemId]
+        );
+      } else {
+        // Stock still remains! Keep status pending, reset winner and final_price for next round
+        await query(
+          `UPDATE auction_items 
+           SET status = 'pending', 
+               winning_team_id = NULL, 
+               final_price = NULL 
+           WHERE id = $1`,
+          [itemId]
+        );
+      }
 
       await query('COMMIT');
 
@@ -248,17 +270,35 @@ function startCountdown() {
 
   timerInterval = setInterval(async () => {
     if (state.status === 'running') {
-      if (state.timer > 0) {
-        state.timer -= 1;
-        if (ioInstance) {
-          ioInstance.emit('auction:timer', { timer: state.timer });
+      if (state.bidDeadline) {
+        const now = Date.now();
+        const remainingMs = state.bidDeadline - now;
+        const remainingSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
+        
+        state.timer = remainingSeconds;
+        
+        if (remainingMs <= 0) {
+          if (timerInterval) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+          }
+          await handleTimerExpiry();
+        } else {
+          if (ioInstance) {
+            ioInstance.emit('auction:timer', { timer: state.timer, bidDeadline: state.bidDeadline });
+          }
+          await saveStateToDb();
         }
-        await saveStateToDb();
       } else {
+        state.timer = 0;
+        if (timerInterval) {
+          clearInterval(timerInterval);
+          timerInterval = null;
+        }
         await handleTimerExpiry();
       }
     }
-  }, 1000);
+  }, 200); // 200ms ticks for high precision
 }
 
 // Initializing WebSocket listeners
@@ -322,7 +362,7 @@ export function initAuction(io: Server) {
       }
 
       // --- SYNCHRONOUS CHECKS (Thread-safe concurrency block) ---
-      if (state.status !== 'running' || state.timer <= 0) {
+      if (state.status !== 'running' || !state.bidDeadline || Date.now() > state.bidDeadline) {
         return callback({ error: 'Bidding is locked. Auction is not active.' });
       }
 
@@ -331,9 +371,6 @@ export function initAuction(io: Server) {
       }
 
       // Expected next bid is exactly current highest bid + 25, or starting price + 25 (if no bids)
-      // Wait, let's verify if first bid is base_price + 25 or exactly base_price?
-      // "Starting Bid: 200. Team A -> 225." So starting bid is 200, and first bid is 225.
-      // That means expected bid is starting_price + 25.
       const expectedBid = (state.highestBid !== null ? state.highestBid : activeItemBasePrice) + 25;
       
       const requestedBid = Number(data.bidAmount);
@@ -361,10 +398,12 @@ export function initAuction(io: Server) {
       state.highestBidderTeamId = user.teamId;
       state.highestBidderName = cachedTeam.name;
 
-      // Auto-increment timer on late-game bids (anti-snipe, e.g., reset to 10s if timer < 10)
-      if (state.timer < 10) {
-        state.timer = 10;
-        io.emit('auction:timer', { timer: state.timer });
+      // Every valid bid sets a 5-second response window
+      state.bidDeadline = Date.now() + 5000;
+      state.timer = 5;
+
+      if (ioInstance) {
+        ioInstance.emit('auction:timer', { timer: state.timer, bidDeadline: state.bidDeadline });
       }
 
       // Trigger asynchronous database updates
@@ -421,9 +460,13 @@ export function initAuction(io: Server) {
 
         await query("UPDATE auction_items SET status = 'active' WHERE id = $1", [data.itemId]);
 
+        const durationSeconds = data.duration || 30;
+
         state.status = 'running';
         state.currentItemId = data.itemId;
-        state.timer = data.duration || 30;
+        state.timer = durationSeconds;
+        state.bidDeadline = Date.now() + durationSeconds * 1000;
+        state.initialDuration = durationSeconds;
         state.highestBid = null;
         state.highestBidderTeamId = null;
         state.highestBidderName = null;
@@ -451,6 +494,13 @@ export function initAuction(io: Server) {
       }
 
       state.status = 'paused';
+      if (state.bidDeadline) {
+        const remainingMs = state.bidDeadline - Date.now();
+        state.timer = Math.max(0, Math.ceil(remainingMs / 1000));
+      } else {
+        state.timer = 0;
+      }
+      state.bidDeadline = null;
       if (timerInterval) {
         clearInterval(timerInterval);
         timerInterval = null;
@@ -472,6 +522,7 @@ export function initAuction(io: Server) {
       }
 
       state.status = 'running';
+      state.bidDeadline = Date.now() + state.timer * 1000;
       startCountdown();
       saveStateToDb().then(broadcastState);
       callback({ success: true });
@@ -488,6 +539,12 @@ export function initAuction(io: Server) {
         return callback({ error: 'No active component on block' });
       }
 
+      state.bidDeadline = Date.now();
+      state.timer = 0;
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
       await handleTimerExpiry();
       callback({ success: true });
     });
@@ -505,7 +562,12 @@ export function initAuction(io: Server) {
       state.highestBid = null;
       state.highestBidderTeamId = null;
       state.highestBidderName = null;
-
+      state.bidDeadline = Date.now();
+      state.timer = 0;
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
       await handleTimerExpiry();
       callback({ success: true });
     });
@@ -527,6 +589,7 @@ export function initAuction(io: Server) {
       state.highestBid = null;
       state.highestBidderTeamId = null;
       state.highestBidderName = null;
+      state.bidDeadline = null;
       activeItemBasePrice = 0;
 
       await saveStateToDb();

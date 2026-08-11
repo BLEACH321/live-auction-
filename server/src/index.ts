@@ -176,7 +176,12 @@ app.delete('/api/admin/teams/:id', authenticateToken, requireRole('admin'), asyn
 // Get all auction items
 app.get('/api/items', async (req: Request, res: Response) => {
   try {
-    const itemsRes = await query('SELECT * FROM auction_items ORDER BY order_index ASC, id ASC');
+    const itemsRes = await query(
+      `SELECT ai.*, 
+              (ai.stock - COALESCE((SELECT COUNT(*) FROM purchases WHERE item_id = ai.id), 0))::integer as remaining_stock
+       FROM auction_items ai 
+       ORDER BY ai.order_index ASC, ai.id ASC`
+    );
     return res.json(itemsRes.rows);
   } catch (error) {
     console.error(error);
@@ -254,17 +259,19 @@ app.post('/api/admin/items/stock', authenticateToken, requireRole('admin'), asyn
 app.get('/api/results', async (req: Request, res: Response) => {
   try {
     const itemsRes = await query(
-      `SELECT ai.*, t.name as team_name 
-       FROM auction_items ai 
-       LEFT JOIN teams t ON ai.winning_team_id = t.id 
-       WHERE ai.status = 'sold' 
-       ORDER BY ai.final_price DESC`
+      `SELECT p.id as purchase_id, p.price as final_price, p.purchase_time, 
+              ai.id, ai.name, ai.image_url, ai.base_price, 
+              t.name as team_name, t.id as winning_team_id 
+       FROM purchases p 
+       JOIN auction_items ai ON p.item_id = ai.id 
+       JOIN teams t ON p.team_id = t.id 
+       ORDER BY p.price DESC, p.purchase_time DESC`
     );
 
     const teamsRes = await query(
-      `SELECT t.*, COUNT(ai.id) as items_purchased 
+      `SELECT t.*, COUNT(p.id) as items_purchased 
        FROM teams t 
-       LEFT JOIN auction_items ai ON t.id = ai.winning_team_id AND ai.status = 'sold'
+       LEFT JOIN purchases p ON t.id = p.team_id
        GROUP BY t.id 
        ORDER BY t.remaining_budget DESC`
     );
@@ -276,6 +283,23 @@ app.get('/api/results', async (req: Request, res: Response) => {
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: 'Failed to fetch results' });
+  }
+});
+
+// Get all purchases (joined with items)
+app.get('/api/purchases', async (req: Request, res: Response) => {
+  try {
+    const purchasesRes = await query(
+      `SELECT p.id as purchase_id, p.price as final_price, p.purchase_time, p.team_id,
+              ai.id, ai.name, ai.image_url, ai.base_price
+       FROM purchases p 
+       JOIN auction_items ai ON p.item_id = ai.id
+       ORDER BY p.purchase_time DESC`
+    );
+    return res.json(purchasesRes.rows);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: 'Failed to fetch purchases' });
   }
 });
 

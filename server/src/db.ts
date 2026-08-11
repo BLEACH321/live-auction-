@@ -120,16 +120,23 @@ function querySimulator(text: string, params: any[] = []): { rows: any[] } {
   }
 
   // 9. List all items ordered
-  if (queryClean.includes('SELECT * FROM auction_items ORDER BY order_index ASC, id ASC') || queryClean === 'SELECT * FROM auction_items') {
+  if (queryClean.includes('FROM auction_items') && !queryClean.includes('WHERE id = $1') && !queryClean.includes('INSERT INTO') && !queryClean.includes('UPDATE') && !queryClean.includes('DELETE')) {
     const sorted = [...fallbackData.auction_items].sort((a, b) => {
       const diff = (a.order_index || 0) - (b.order_index || 0);
       return diff !== 0 ? diff : a.id - b.id;
     });
-    return { rows: sorted };
+    const mapped = sorted.map(item => {
+      const purchaseCount = fallbackData.purchases.filter(p => p.item_id === item.id).length;
+      return {
+        ...item,
+        remaining_stock: item.stock - purchaseCount
+      };
+    });
+    return { rows: mapped };
   }
 
   // 10. Find item by id
-  if (queryClean.includes('SELECT * FROM auction_items WHERE id = $1')) {
+  if (queryClean.includes('FROM auction_items WHERE id = $1')) {
     const id = params[0];
     const item = fallbackData.auction_items.find(i => i.id === id);
     return { rows: item ? [item] : [] };
@@ -364,26 +371,30 @@ function querySimulator(text: string, params: any[] = []): { rows: any[] } {
     return { rows: filteredBids.slice(0, 6) };
   }
 
-  // 29. Results sold items query
-  if (queryClean.includes("SELECT ai.*, t.name as team_name FROM auction_items ai LEFT JOIN teams t ON ai.winning_team_id = t.id WHERE ai.status = 'sold'")) {
-    const soldList = fallbackData.auction_items
-      .filter(i => i.status === 'sold')
-      .map(i => {
-        const team = fallbackData.teams.find(t => t.id === i.winning_team_id);
-        return {
-          ...i,
-          team_name: team ? team.name : 'Unknown Team',
-        };
-      });
+  // 29. Results sold items query (from purchases)
+  if (queryClean.includes('FROM purchases p JOIN auction_items ai ON p.item_id = ai.id JOIN teams t ON p.team_id = t.id')) {
+    const soldList = fallbackData.purchases.map(p => {
+      const item = fallbackData.auction_items.find(i => i.id === p.item_id);
+      const team = fallbackData.teams.find(t => t.id === p.team_id);
+      return {
+        id: item ? item.id : p.item_id,
+        name: item ? item.name : 'Unknown Item',
+        image_url: item ? item.image_url : null,
+        base_price: item ? item.base_price : 0,
+        final_price: p.price,
+        winning_team_id: p.team_id,
+        team_name: team ? team.name : 'Unknown Team'
+      };
+    });
     soldList.sort((a, b) => b.final_price - a.final_price);
     return { rows: soldList };
   }
 
-  // 30. Standings query
-  if (queryClean.includes("SELECT t.*, COUNT(ai.id) as items_purchased FROM teams t LEFT JOIN auction_items ai ON t.id = ai.winning_team_id AND ai.status = 'sold' GROUP BY t.id")) {
+  // 30. Standings query (from purchases)
+  if (queryClean.includes('FROM teams t LEFT JOIN purchases p ON t.id = p.team_id GROUP BY t.id')) {
     const standings = fallbackData.teams.map(t => {
-      const itemsPurchasedCount = fallbackData.auction_items.filter(
-        i => i.winning_team_id === t.id && i.status === 'sold'
+      const itemsPurchasedCount = fallbackData.purchases.filter(
+        p => p.team_id === t.id
       ).length;
       return {
         ...t,
@@ -418,6 +429,46 @@ function querySimulator(text: string, params: any[] = []): { rows: any[] } {
     fallbackData.users = fallbackData.users.filter(u => u.id !== userId);
     saveFallback();
     return { rows: [] };
+  }
+
+  // Reset Item status
+  if (queryClean.includes("UPDATE auction_items SET status = 'pending', winning_team_id = NULL, final_price = NULL WHERE id = $1") ||
+      queryClean.includes("UPDATE auction_items SET status = 'pending', winning_team_id = null, final_price = null WHERE id = $1")) {
+    const itemId = params[0];
+    const item = fallbackData.auction_items.find(i => i.id === itemId);
+    if (item) {
+      item.status = 'pending';
+      item.winning_team_id = null;
+      item.final_price = null;
+      saveFallback();
+    }
+    return { rows: [] };
+  }
+
+  // COUNT purchases of item
+  if (queryClean.includes('SELECT COUNT(*) FROM purchases WHERE item_id = $1')) {
+    const itemId = params[0];
+    const count = fallbackData.purchases.filter(p => p.item_id === itemId).length;
+    return { rows: [{ count: count.toString() }] };
+  }
+
+  // Get all purchases (joined with items)
+  if (queryClean.includes('FROM purchases p JOIN auction_items ai ON p.item_id = ai.id')) {
+    const list = fallbackData.purchases.map(p => {
+      const item = fallbackData.auction_items.find(i => i.id === p.item_id);
+      return {
+        purchase_id: p.id,
+        final_price: p.price,
+        purchase_time: p.purchase_time,
+        team_id: p.team_id,
+        id: item ? item.id : p.item_id,
+        name: item ? item.name : 'Unknown Item',
+        image_url: item ? item.image_url : null,
+        base_price: item ? item.base_price : 0
+      };
+    });
+    list.sort((a, b) => new Date(b.purchase_time).getTime() - new Date(a.purchase_time).getTime());
+    return { rows: list };
   }
 
   console.warn(`[Query Simulator] Unhandled query pattern. Returning empty rows: "${queryClean}"`);

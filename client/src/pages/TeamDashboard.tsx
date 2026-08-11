@@ -13,27 +13,33 @@ interface Team {
   total_spent: number;
 }
 
-interface AuctionItem {
-  id: number;
-  name: string;
-  image_url: string | null;
-  base_price: number;
-  status: 'pending' | 'active' | 'sold' | 'unsold';
-  winning_team_id: number | null;
-  final_price: number | null;
-  stock: number;
-}
+
 
 export const TeamDashboard: React.FC = () => {
   const { socket } = useSocket();
   const { user } = useAuth();
 
   const [teamInfo, setTeamInfo] = useState<Team | null>(null);
-  const [items, setItems] = useState<AuctionItem[]>([]);
   const [auctionState, setAuctionState] = useState<any>(null);
   const [biddingError, setBiddingError] = useState<string | null>(null);
   const [biddingSuccess, setBiddingSuccess] = useState<boolean>(false);
   const [recentBids, setRecentBids] = useState<any[]>([]);
+  const [myPurchases, setMyPurchases] = useState<any[]>([]);
+  const [localTimer, setLocalTimer] = useState<number>(0);
+
+  useEffect(() => {
+    if (auctionState?.status === 'running' && auctionState?.bidDeadline) {
+      const updateTimer = () => {
+        const rem = Math.max(0, Math.ceil((auctionState.bidDeadline - Date.now()) / 1000));
+        setLocalTimer(rem);
+      };
+      updateTimer();
+      const interval = setInterval(updateTimer, 100);
+      return () => clearInterval(interval);
+    } else {
+      setLocalTimer(auctionState?.timer || 0);
+    }
+  }, [auctionState?.bidDeadline, auctionState?.timer, auctionState?.status]);
 
   const fetchTeamAndItems = async () => {
     if (!user?.teamId) return;
@@ -43,9 +49,10 @@ export const TeamDashboard: React.FC = () => {
       const myTeam = teamsData.find((t: any) => t.id === user.teamId);
       if (myTeam) setTeamInfo(myTeam);
 
-      const itemsRes = await fetch(`${API_URL}/api/items`);
-      const itemsData = await itemsRes.json();
-      setItems(itemsData);
+      const purchasesRes = await fetch(`${API_URL}/api/purchases`);
+      const purchasesData = await purchasesRes.json();
+      const filtered = purchasesData.filter((p: any) => p.team_id === user.teamId);
+      setMyPurchases(filtered);
     } catch (e) {
       console.error('Error fetching team details:', e);
     }
@@ -68,8 +75,12 @@ export const TeamDashboard: React.FC = () => {
       if (myTeam) setTeamInfo(myTeam);
     });
 
-    socket.on('items:update', (updatedItems: AuctionItem[]) => {
-      setItems(updatedItems);
+    socket.on('auction:timer', (data: { timer: number; bidDeadline: number | null }) => {
+      setAuctionState((prev: any) => (prev ? { ...prev, timer: data.timer, bidDeadline: data.bidDeadline } : null));
+    });
+
+    socket.on('items:update', () => {
+      fetchTeamAndItems();
     });
 
     socket.on('auction:sold', () => {
@@ -94,6 +105,7 @@ export const TeamDashboard: React.FC = () => {
     return () => {
       socket.off('auction:state');
       socket.off('teams:update');
+      socket.off('auction:timer');
       socket.off('items:update');
       socket.off('auction:sold');
       socket.off('auction:unsold');
@@ -137,8 +149,7 @@ export const TeamDashboard: React.FC = () => {
     });
   };
 
-  // Get items purchased by THIS team
-  const myPurchases = items.filter(item => item.winning_team_id === user?.teamId && item.status === 'sold');
+  // Get items purchased by THIS team (now loaded dynamically from purchases API)
 
   return (
     <div className="space-y-6">
@@ -213,8 +224,8 @@ export const TeamDashboard: React.FC = () => {
                       <div>
                         <span className="block text-[9px] text-arena-textMuted font-mono uppercase tracking-wider">TIMER</span>
                         <div className="text-3xl font-display font-black text-white flex items-center gap-1.5 mt-0.5">
-                          <Clock className={`w-5 h-5 ${auctionState.timer < 10 ? 'text-arena-glowPink animate-pulse glow-text-pink' : 'text-arena-accent'}`} />
-                          <span className={auctionState.timer < 10 ? 'text-arena-glowPink' : 'text-white'}>{auctionState.timer}s</span>
+                          <Clock className={`w-5 h-5 ${localTimer < 10 ? 'text-arena-glowPink animate-pulse glow-text-pink' : 'text-arena-accent'}`} />
+                          <span className={localTimer < 10 ? 'text-arena-glowPink' : 'text-white'}>{localTimer}s</span>
                         </div>
                       </div>
                       <div>

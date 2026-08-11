@@ -21,6 +21,7 @@ interface AuctionItem {
   winning_team_id: number | null;
   final_price: number | null;
   stock: number;
+  remaining_stock?: number;
 }
 
 export const AdminDashboard: React.FC = () => {
@@ -33,6 +34,21 @@ export const AdminDashboard: React.FC = () => {
 
   // Auction live state
   const [auctionState, setAuctionState] = useState<any>(null);
+  const [localTimer, setLocalTimer] = useState<number>(0);
+
+  useEffect(() => {
+    if (auctionState?.status === 'running' && auctionState?.bidDeadline) {
+      const updateTimer = () => {
+        const rem = Math.max(0, Math.ceil((auctionState.bidDeadline - Date.now()) / 1000));
+        setLocalTimer(rem);
+      };
+      updateTimer();
+      const interval = setInterval(updateTimer, 100);
+      return () => clearInterval(interval);
+    } else {
+      setLocalTimer(auctionState?.timer || 0);
+    }
+  }, [auctionState?.bidDeadline, auctionState?.timer, auctionState?.status]);
 
   // Form inputs - Add Team
   const [teamName, setTeamName] = useState('');
@@ -110,6 +126,10 @@ export const AdminDashboard: React.FC = () => {
       setTeams(updatedTeams);
     });
 
+    socket.on('auction:timer', (data: { timer: number; bidDeadline: number | null }) => {
+      setAuctionState((prev: any) => (prev ? { ...prev, timer: data.timer, bidDeadline: data.bidDeadline } : null));
+    });
+
     socket.on('items:update', (updatedItems: AuctionItem[]) => {
       setItems(updatedItems);
     });
@@ -122,6 +142,7 @@ export const AdminDashboard: React.FC = () => {
     return () => {
       socket.off('auction:state');
       socket.off('teams:update');
+      socket.off('auction:timer');
       socket.off('items:update');
       socket.off('system:reset');
     };
@@ -1045,7 +1066,7 @@ export const AdminDashboard: React.FC = () => {
                       <span className="block text-[10px] text-arena-textMuted font-mono">TIMER REMAINING:</span>
                       <span className="text-2xl font-bold text-white flex items-center gap-1">
                         <Clock size={18} className="text-arena-glow" />
-                        {auctionState.timer}s
+                        {localTimer}s
                       </span>
                     </div>
                     <div>
@@ -1091,9 +1112,9 @@ export const AdminDashboard: React.FC = () => {
                       disabled={auctionState?.status === 'running' || auctionState?.status === 'paused'}
                     >
                       <option value="">Choose Component...</option>
-                      {items.filter(item => item.status === 'pending' || item.status === 'unsold').map((item) => (
+                      {items.filter(item => (item.status === 'pending' || item.status === 'unsold') && (item.remaining_stock === undefined || item.remaining_stock > 0)).map((item) => (
                         <option key={item.id} value={item.id}>
-                          {item.name} ({item.status})
+                          {item.name} ({item.remaining_stock !== undefined ? `${item.remaining_stock}/${item.stock} left` : `${item.stock} pcs`})
                         </option>
                       ))}
                     </select>

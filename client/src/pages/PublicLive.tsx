@@ -22,6 +22,21 @@ export const PublicLive: React.FC = () => {
   // Persistent result overlays for between rounds
   const [lastSold, setLastSold] = useState<SoldResult | null>(null);
   const [lastUnsold, setLastUnsold] = useState<UnsoldResult | null>(null);
+  const [localTimer, setLocalTimer] = useState<number>(0);
+
+  useEffect(() => {
+    if (auctionState?.status === 'running' && auctionState?.bidDeadline) {
+      const updateTimer = () => {
+        const rem = Math.max(0, Math.ceil((auctionState.bidDeadline - Date.now()) / 1000));
+        setLocalTimer(rem);
+      };
+      updateTimer();
+      const interval = setInterval(updateTimer, 100);
+      return () => clearInterval(interval);
+    } else {
+      setLocalTimer(auctionState?.timer || 0);
+    }
+  }, [auctionState?.bidDeadline, auctionState?.timer, auctionState?.status]);
 
   useEffect(() => {
     if (!socket) return;
@@ -39,8 +54,8 @@ export const PublicLive: React.FC = () => {
       }
     });
 
-    socket.on('auction:timer', (data: { timer: number }) => {
-      setAuctionState((prev: any) => (prev ? { ...prev, timer: data.timer } : null));
+    socket.on('auction:timer', (data: { timer: number; bidDeadline: number | null }) => {
+      setAuctionState((prev: any) => (prev ? { ...prev, timer: data.timer, bidDeadline: data.bidDeadline } : null));
     });
 
     socket.on('auction:sold', (data: any) => {
@@ -145,15 +160,15 @@ export const PublicLive: React.FC = () => {
             <div className="space-y-6">
               
               {/* Massive Timer panel */}
-              <div className={`bg-arena-panel rounded border p-6 text-center relative overflow-hidden transition-all duration-300 ${auctionState.timer < 10 ? 'glow-border-pink border-arena-glowPink/40' : 'border-arena-border'}`}>
+              <div className={`bg-arena-panel rounded border p-6 text-center relative overflow-hidden transition-all duration-300 ${localTimer < 10 ? 'glow-border-pink border-arena-glowPink/40' : 'border-arena-border'}`}>
                 <span className="block text-xs font-mono text-arena-textMuted mb-2 tracking-widest uppercase">// COUNTDOWN SECONDS</span>
-                <div className={`text-6xl font-display font-black tracking-tighter ${auctionState.timer < 10 ? 'text-arena-glowPink animate-pulse glow-text-pink' : 'text-white'}`}>
-                  {auctionState.timer}s
+                <div className={`text-6xl font-display font-black tracking-tighter ${localTimer < 10 ? 'text-arena-glowPink animate-pulse glow-text-pink' : 'text-white'}`}>
+                  {localTimer}s
                 </div>
                 <div className="w-full bg-arena-bg h-1 rounded overflow-hidden mt-4">
                   <div
-                    className={`h-full transition-all duration-1000 ${auctionState.timer < 10 ? 'bg-arena-glowPink shadow-[0_0_10px_#ff1a40]' : 'bg-arena-accent shadow-[0_0_10px_#ff6b00]'}`}
-                    style={{ width: `${Math.min(100, (auctionState.timer / 30) * 100)}%` }}
+                    className={`h-full transition-all duration-300 ${localTimer < 10 ? 'bg-arena-glowPink shadow-[0_0_10px_#ff1a40]' : 'bg-arena-accent shadow-[0_0_10px_#ff6b00]'}`}
+                    style={{ width: `${Math.min(100, (localTimer / (auctionState.highestBid !== null ? 5 : (auctionState.initialDuration || 30))) * 100)}%` }}
                   ></div>
                 </div>
               </div>
