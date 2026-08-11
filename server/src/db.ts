@@ -463,6 +463,15 @@ function querySimulator(text: string, params: any[] = []): { rows: any[] } {
     return { rows: [{ count: count.toString() }] };
   }
 
+  // SUM quantity of purchases of item
+  if (queryClean.includes('FROM purchases WHERE item_id = $1') && (queryClean.includes('SUM(COALESCE(quantity, 1))') || queryClean.includes('SUM(quantity)'))) {
+    const itemId = params[0];
+    const sum = fallbackData.purchases
+      .filter(p => p.item_id === itemId)
+      .reduce((s, p) => s + (p.quantity || 1), 0);
+    return { rows: [{ sum: sum.toString() }] };
+  }
+
   // Get all purchases (joined with items)
   if (queryClean.includes('FROM purchases p JOIN auction_items ai ON p.item_id = ai.id')) {
     const list = fallbackData.purchases.map(p => {

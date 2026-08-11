@@ -204,8 +204,9 @@
       "highestBid": null,
       "highestBidderTeamId": null,
       "highestBidderName": null,
-      "bidDeadline": 1786486290737,
-      "initialDuration": 30
+      "bidDeadline": null,
+      "initialDuration": 30,
+      "currentQuantity": 1
     }
   }
 }
