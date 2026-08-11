@@ -275,7 +275,7 @@ app.post('/api/admin/items/stock', authenticateToken, requireRole('admin'), asyn
 app.get('/api/results', async (req: Request, res: Response) => {
   try {
     const itemsRes = await query(
-      `SELECT p.id as purchase_id, p.price as final_price, p.purchase_time, 
+      `SELECT p.id as purchase_id, p.price as final_price, p.purchase_time, p.quantity,
               ai.id, ai.name, ai.image_url, ai.base_price, 
               t.name as team_name, t.id as winning_team_id 
        FROM purchases p 

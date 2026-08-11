@@ -10,6 +10,7 @@ interface SoldItem {
   base_price: number;
   final_price: number;
   team_name: string;
+  quantity: number;
 }
 
 interface TeamStanding {
@@ -160,7 +161,7 @@ export const Results: React.FC = () => {
                     <div>
                       <h4 className="font-bold text-slate-200 text-sm uppercase">{item.name}</h4>
                       <p className="text-[10px] text-arena-textMuted mt-0.5">
-                        Sold to <span className="font-semibold text-arena-accent uppercase">{item.team_name}</span>
+                        Sold to <span className="font-semibold text-arena-accent uppercase">{item.team_name}</span> (Qty: {item.quantity || 1})
                       </p>
                     </div>
                   </div>

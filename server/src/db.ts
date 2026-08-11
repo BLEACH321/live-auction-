@@ -393,7 +393,8 @@ function querySimulator(text: string, params: any[] = []): { rows: any[] } {
         base_price: item ? item.base_price : 0,
         final_price: p.price,
         winning_team_id: p.team_id,
-        team_name: team ? team.name : 'Unknown Team'
+        team_name: team ? team.name : 'Unknown Team',
+        quantity: p.quantity || 1
       };
     });
     soldList.sort((a, b) => b.final_price - a.final_price);
