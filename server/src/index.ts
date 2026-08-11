@@ -136,6 +136,43 @@ app.post('/api/admin/teams/budget', authenticateToken, requireRole('admin'), asy
   }
 });
 
+// Admin: Delete a team
+app.delete('/api/admin/teams/:id', authenticateToken, requireRole('admin'), async (req: Request, res: Response) => {
+  const teamId = Number(req.params.id);
+
+  if (isNaN(teamId)) {
+    return res.status(400).json({ error: 'Invalid team ID' });
+  }
+
+  try {
+    // Get user_id first to delete from users table
+    const teamRes = await query('SELECT user_id FROM teams WHERE id = $1', [teamId]);
+    if (teamRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Team not found' });
+    }
+    const userId = teamRes.rows[0].user_id;
+
+    await query('BEGIN');
+    // Delete user which automatically cascades to team deletion
+    await query('DELETE FROM users WHERE id = $1', [userId]);
+    await query('COMMIT');
+
+    // Reload cache
+    await reloadTeamBudgetsCache();
+
+    // Notify all clients of new team list
+    const allTeams = await query('SELECT * FROM teams ORDER BY name ASC');
+    io.emit('teams:update', allTeams.rows);
+    await broadcastState();
+
+    return res.json({ success: true, message: 'Team deleted successfully' });
+  } catch (error) {
+    await query('ROLLBACK');
+    console.error('Error deleting team:', error);
+    return res.status(500).json({ error: 'Failed to delete team' });
+  }
+});
+
 // Get all auction items
 app.get('/api/items', async (req: Request, res: Response) => {
   try {

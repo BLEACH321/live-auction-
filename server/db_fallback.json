@@ -5,9 +5,66 @@
       "username": "iic student",
       "password_hash": "$2a$10$xkqHkBolm7Pq511cAMXjLeo.xLak3kZIL2AihG/6u6o.7r40LyvKC",
       "role": "admin"
+    },
+    {
+      "id": 2,
+      "username": "alex12",
+      "password_hash": "$2a$10$0rJ8.KmuR/v3sfgzqlGU3ulUAuYhiUYBbcDqonpsTw6YODwxkqma2",
+      "role": "team"
+    },
+    {
+      "id": 3,
+      "username": "FORGE12",
+      "password_hash": "$2a$10$rgJSyMI39DfEUa0Phod24.ne1dVkmvcmrT9va6tvxyZLOaTXBWdZi",
+      "role": "team"
+    },
+    {
+      "id": 4,
+      "username": "202619",
+      "password_hash": "$2a$10$YsAoMnm3DT61w9E5K8eg4ebLGs6YTooar0GKDKaDcTsfjMIcJxunm",
+      "role": "team"
+    },
+    {
+      "id": 5,
+      "username": "Sunny123",
+      "password_hash": "$2a$10$Mor5CFvNkGAgR8amswH8Outvi8QhM7FnTKUj1AYqp3jQ5y9L/sNtu",
+      "role": "team"
     }
   ],
-  "teams": [],
+  "teams": [
+    {
+      "id": 1,
+      "user_id": 2,
+      "name": "Alex 1",
+      "initial_budget": 3000,
+      "remaining_budget": 3000,
+      "total_spent": 0
+    },
+    {
+      "id": 2,
+      "user_id": 3,
+      "name": "FORGE1",
+      "initial_budget": 2000,
+      "remaining_budget": 2000,
+      "total_spent": 0
+    },
+    {
+      "id": 3,
+      "user_id": 4,
+      "name": "SUNNY1",
+      "initial_budget": 2000,
+      "remaining_budget": 2000,
+      "total_spent": 0
+    },
+    {
+      "id": 4,
+      "user_id": 5,
+      "name": "Sunny12",
+      "initial_budget": 2000,
+      "remaining_budget": 2000,
+      "total_spent": 0
+    }
+  ],
   "auction_items": [],
   "bids": [],
   "purchases": [],

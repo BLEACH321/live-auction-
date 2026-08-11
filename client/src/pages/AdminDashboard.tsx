@@ -360,6 +360,32 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
+  const handleDeleteTeam = async (teamId: number, name: string) => {
+    if (!window.confirm(`Are you sure you want to delete team "${name}"? This will also delete their account.`)) {
+      return;
+    }
+    setErrorMsg(null);
+    setSuccessMsg(null);
+    try {
+      const res = await fetch(`${API_URL}/api/admin/teams/${teamId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setErrorMsg(data.error || 'Failed to delete team');
+      } else {
+        setSuccessMsg(`Team "${name}" deleted successfully.`);
+        fetchData();
+      }
+    } catch (err) {
+      setErrorMsg('Network error deleting team');
+    }
+  };
+
   // Bulk Component Upload logic
   const parseItemCSV = (text: string) => {
     const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
@@ -1178,14 +1204,23 @@ export const AdminDashboard: React.FC = () => {
             <h2 className="text-sm font-bold text-white uppercase tracking-wider mb-3">Teams Ledger</h2>
             <div className="space-y-2">
               {teams.map((t) => (
-                <div key={t.id} className="p-2.5 bg-arena-bg rounded border border-arena-border flex justify-between items-center">
+                <div key={t.id} className="p-2.5 bg-arena-bg rounded border border-arena-border flex justify-between items-center group relative">
                   <div>
                     <h4 className="text-xs font-bold text-white">{t.name}</h4>
                     <span className="text-[10px] text-arena-textMuted">Spent: {t.total_spent} Coins</span>
                   </div>
-                  <span className="text-xs font-bold font-mono text-emerald-400">
-                    {t.remaining_budget} Coins
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold font-mono text-emerald-400">
+                      {t.remaining_budget} Coins
+                    </span>
+                    <button
+                      onClick={() => handleDeleteTeam(t.id, t.name)}
+                      className="p-1 text-slate-500 hover:text-red-400 hover:bg-red-950/20 rounded border border-transparent hover:border-red-500/20 transition-all cursor-pointer"
+                      title={`Delete ${t.name}`}
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
                 </div>
               ))}
               {teams.length === 0 && (

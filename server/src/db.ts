@@ -77,10 +77,17 @@ function querySimulator(text: string, params: any[] = []): { rows: any[] } {
   }
 
   // 4. Find User by username
-  if (queryClean.includes('SELECT * FROM users WHERE username = $1')) {
+  if (queryClean.includes('FROM users WHERE username = $1')) {
     const username = params[0];
     const user = fallbackData.users.find(u => u.username === username);
     return { rows: user ? [user] : [] };
+  }
+
+  // Find Team by name
+  if (queryClean.includes('FROM teams WHERE name = $1')) {
+    const name = params[0];
+    const team = fallbackData.teams.find(t => t.name === name);
+    return { rows: team ? [team] : [] };
   }
 
   // 5. Find User by id
@@ -98,7 +105,7 @@ function querySimulator(text: string, params: any[] = []): { rows: any[] } {
   }
 
   // 7. Find Team by id
-  if (queryClean.includes('SELECT * FROM teams WHERE id = $1')) {
+  if (queryClean.includes('FROM teams WHERE id = $1')) {
     const id = params[0];
     const team = fallbackData.teams.find(t => t.id === id);
     return { rows: team ? [team] : [] };
@@ -396,6 +403,20 @@ function querySimulator(text: string, params: any[] = []): { rows: any[] } {
       item.stock = stock;
       saveFallback();
     }
+    return { rows: [] };
+  }
+
+  // 32. Delete User (and cascade team)
+  if (queryClean.includes('DELETE FROM users WHERE id = $1')) {
+    const userId = params[0];
+    const team = fallbackData.teams.find(t => t.user_id === userId);
+    if (team) {
+      fallbackData.bids = fallbackData.bids.filter(b => b.team_id !== team.id);
+      fallbackData.purchases = fallbackData.purchases.filter(p => p.team_id !== team.id);
+      fallbackData.teams = fallbackData.teams.filter(t => t.id !== team.id);
+    }
+    fallbackData.users = fallbackData.users.filter(u => u.id !== userId);
+    saveFallback();
     return { rows: [] };
   }
 
