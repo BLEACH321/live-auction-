@@ -20,6 +20,7 @@ interface AuctionItem {
   status: 'pending' | 'active' | 'sold' | 'unsold';
   winning_team_id: number | null;
   final_price: number | null;
+  stock: number;
 }
 
 export const AdminDashboard: React.FC = () => {
@@ -49,6 +50,7 @@ export const AdminDashboard: React.FC = () => {
   const [itemName, setItemName] = useState('');
   const [itemImage, setItemImage] = useState('');
   const [itemBasePrice, setItemBasePrice] = useState('200');
+  const [itemStock, setItemStock] = useState('1');
   
   // Bulk component states
   const [componentAddMode, setComponentAddMode] = useState<'single' | 'bulk'>('single');
@@ -311,6 +313,7 @@ export const AdminDashboard: React.FC = () => {
           name: itemName,
           imageUrl: itemImage,
           basePrice: itemBasePrice,
+          stock: itemStock,
         }),
       });
 
@@ -322,12 +325,38 @@ export const AdminDashboard: React.FC = () => {
         setItemName('');
         setItemImage('');
         setItemBasePrice('200');
+        setItemStock('1');
         setSelectedFile(null);
         setImagePreview(null);
         fetchData();
       }
     } catch (err) {
       setErrorMsg('Network error adding component');
+    }
+  };
+
+  const handleUpdateStock = async (itemId: number, newStock: number) => {
+    setErrorMsg(null);
+    setSuccessMsg(null);
+    try {
+      const res = await fetch(`${API_URL}/api/admin/items/stock`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ itemId, stock: newStock }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setErrorMsg(data.error || 'Failed to update stock');
+      } else {
+        setSuccessMsg('Stock updated successfully.');
+        fetchData();
+      }
+    } catch (err) {
+      setErrorMsg('Network error updating stock');
     }
   };
 
@@ -341,6 +370,7 @@ export const AdminDashboard: React.FC = () => {
     const nameIdx = headers.findIndex(h => h.includes('name') || h === 'item');
     const imageIdx = headers.findIndex(h => h.includes('image') || h.includes('url') || h === 'img');
     const priceIdx = headers.findIndex(h => h.includes('price') || h.includes('base') || h.includes('reserve') || h.includes('cost'));
+    const stockIdx = headers.findIndex(h => h.includes('stock') || h.includes('qty') || h.includes('quantity') || h.includes('count'));
 
     if (nameIdx === -1 || priceIdx === -1) {
       throw new Error('CSV columns must include: name, basePrice');
@@ -353,7 +383,8 @@ export const AdminDashboard: React.FC = () => {
       results.push({
         name: row[nameIdx] || '',
         imageUrl: imageIdx !== -1 && row[imageIdx] ? row[imageIdx] : null,
-        basePrice: Number(row[priceIdx] || 0)
+        basePrice: Number(row[priceIdx] || 0),
+        stock: stockIdx !== -1 && row[stockIdx] ? Number(row[stockIdx]) : 1
       });
     }
     return results;
@@ -367,7 +398,8 @@ export const AdminDashboard: React.FC = () => {
     return data.map((item: any) => ({
       name: item.name || '',
       imageUrl: item.imageUrl || item.image || null,
-      basePrice: Number(item.basePrice || item.price || 0)
+      basePrice: Number(item.basePrice || item.price || 0),
+      stock: Number(item.stock || item.qty || item.quantity || 1)
     }));
   };
 
@@ -833,6 +865,15 @@ export const AdminDashboard: React.FC = () => {
                   className="w-full px-3 py-2 bg-arena-bg border border-arena-border rounded text-sm text-white focus:outline-none focus:border-arena-accent"
                   required
                 />
+                <input
+                  type="number"
+                  placeholder="Stock Quantity"
+                  value={itemStock}
+                  onChange={(e) => setItemStock(e.target.value)}
+                  className="w-full px-3 py-2 bg-arena-bg border border-arena-border rounded text-sm text-white focus:outline-none focus:border-arena-accent"
+                  min="0"
+                  required
+                />
                 <button
                   type="submit"
                   className="w-full py-2 bg-arena-accent hover:bg-orange-600 text-white rounded text-sm font-semibold flex items-center justify-center gap-1 transition-colors cursor-pointer"
@@ -882,7 +923,7 @@ export const AdminDashboard: React.FC = () => {
                     {bulkItemUploading ? 'Uploading...' : 'Process File'}
                   </button>
                   <a
-                    href="data:text/csv;charset=utf-8,name,imageUrl,basePrice%0AServo%20Motor,,200%0AUltrasonic%20Sensor,,150"
+                    href="data:text/csv;charset=utf-8,name,imageUrl,basePrice,stock%0AServo%20Motor,,200,5%0AUltrasonic%20Sensor,,150,5"
                     download="components_template.csv"
                     className="py-2 px-3 bg-arena-panel hover:bg-slate-800 text-slate-300 rounded text-xs font-mono font-bold uppercase tracking-wider border border-arena-border text-center flex items-center justify-center cursor-pointer"
                     title="Download CSV template"
@@ -1160,16 +1201,46 @@ export const AdminDashboard: React.FC = () => {
             <h2 className="text-sm font-bold text-white uppercase tracking-wider mb-3">Component Catalog</h2>
             <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
               {items.map((item) => (
-                <div key={item.id} className="p-2 bg-arena-bg rounded border border-arena-border flex justify-between items-center text-xs">
-                  <span className="font-medium text-slate-300 truncate max-w-[130px]">{item.name}</span>
-                  <span className={`px-2 py-0.5 rounded-[3px] text-[10px] font-bold uppercase ${
-                    item.status === 'sold' ? 'bg-arena-glowGreen/10 text-arena-glowGreen border border-arena-glowGreen/20' :
-                    item.status === 'unsold' ? 'bg-arena-glowPink/10 text-arena-glowPink border border-arena-glowPink/20' :
-                    item.status === 'active' ? 'bg-orange-950/20 text-arena-accent border border-arena-accent/20 animate-pulse' :
-                    'bg-slate-800 text-slate-400'
-                  }`}>
-                    {item.status}
-                  </span>
+                <div key={item.id} className="p-2 bg-arena-bg rounded border border-arena-border flex flex-col gap-2 text-xs">
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium text-slate-300 truncate max-w-[150px]">{item.name}</span>
+                    <span className={`px-2 py-0.5 rounded-[3px] text-[10px] font-bold uppercase ${
+                      item.status === 'sold' ? 'bg-arena-glowGreen/10 text-arena-glowGreen border border-arena-glowGreen/20' :
+                      item.status === 'unsold' ? 'bg-arena-glowPink/10 text-arena-glowPink border border-arena-glowPink/20' :
+                      item.status === 'active' ? 'bg-orange-950/20 text-arena-accent border border-arena-accent/20 animate-pulse' :
+                      'bg-slate-800 text-slate-400'
+                    }`}>
+                      {item.status}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center border-t border-arena-border/30 pt-1.5 mt-0.5">
+                    <span className="text-[10px] text-arena-textMuted font-mono">STOCK:</span>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min="0"
+                        className="w-12 px-1 py-0.5 bg-arena-panel border border-arena-border text-center text-white rounded text-[10px] focus:outline-none focus:border-arena-accent font-mono"
+                        defaultValue={item.stock}
+                        onBlur={async (e) => {
+                          const val = Number(e.target.value);
+                          if (!isNaN(val) && val >= 0 && val !== item.stock) {
+                            await handleUpdateStock(item.id, val);
+                          }
+                        }}
+                        onKeyDown={async (e) => {
+                          if (e.key === 'Enter') {
+                            const target = e.target as HTMLInputElement;
+                            const val = Number(target.value);
+                            if (!isNaN(val) && val >= 0 && val !== item.stock) {
+                              await handleUpdateStock(item.id, val);
+                              target.blur();
+                            }
+                          }
+                        }}
+                      />
+                      <span className="text-[9px] text-arena-textMuted uppercase font-mono">PCS</span>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>

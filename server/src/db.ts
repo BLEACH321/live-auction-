@@ -168,8 +168,10 @@ function querySimulator(text: string, params: any[] = []): { rows: any[] } {
   }
 
   // 15. Insert Item
-  if (queryClean.includes('INSERT INTO auction_items (name, image_url, base_price, status, order_index) VALUES ($1, $2, $3, $4, $5)')) {
+  if (queryClean.includes('INSERT INTO auction_items (name, image_url, base_price, status, order_index) VALUES ($1, $2, $3, $4, $5)') ||
+      queryClean.includes('INSERT INTO auction_items (name, image_url, base_price, status, order_index, stock) VALUES ($1, $2, $3, $4, $5, $6)')) {
     const id = fallbackData.auction_items.length + 1;
+    const hasStock = queryClean.includes(', stock)');
     const newItem = {
       id,
       name: params[0],
@@ -179,6 +181,7 @@ function querySimulator(text: string, params: any[] = []): { rows: any[] } {
       winning_team_id: null,
       final_price: null,
       order_index: Number(params[4]),
+      stock: hasStock && params[5] !== undefined ? Number(params[5]) : 1
     };
     fallbackData.auction_items.push(newItem);
     saveFallback();
@@ -384,6 +387,18 @@ function querySimulator(text: string, params: any[] = []): { rows: any[] } {
     return { rows: standings };
   }
 
+  // 31. Update Item stock
+  if (queryClean.includes('UPDATE auction_items SET stock = $1 WHERE id = $2')) {
+    const stock = Number(params[0]);
+    const itemId = params[1];
+    const item = fallbackData.auction_items.find(i => i.id === itemId);
+    if (item) {
+      item.stock = stock;
+      saveFallback();
+    }
+    return { rows: [] };
+  }
+
   console.warn(`[Query Simulator] Unhandled query pattern. Returning empty rows: "${queryClean}"`);
   return { rows: [] };
 }
@@ -444,7 +459,8 @@ export async function initDatabase() {
       status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'active', 'sold', 'unsold')),
       winning_team_id INTEGER REFERENCES teams(id) ON DELETE SET NULL,
       final_price DECIMAL(12, 2),
-      order_index INTEGER DEFAULT 0
+      order_index INTEGER DEFAULT 0,
+      stock INTEGER DEFAULT 1
     );
   `);
 
@@ -501,11 +517,11 @@ async function seedDatabase() {
   await query('INSERT INTO teams (user_id, name, initial_budget, remaining_budget, total_spent) VALUES ($1, $2, $3, $4, 0.00)', [team2User.rows[0].id, 'Team Beta', 2000.00, 2000.00]);
   await query('INSERT INTO teams (user_id, name, initial_budget, remaining_budget, total_spent) VALUES ($1, $2, $3, $4, 0.00)', [team3User.rows[0].id, 'Team Gamma', 2000.00, 2000.00]);
 
-  await query("INSERT INTO auction_items (name, image_url, base_price, status, order_index) VALUES ('Servo Motor', 'https://images.unsplash.com/photo-1614064641938-3bbee52942c7?w=400&q=80', 200.00, 'pending', 1)");
-  await query("INSERT INTO auction_items (name, image_url, base_price, status, order_index) VALUES ('Ultrasonic Sensor', 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=400&q=80', 150.00, 'pending', 2)");
-  await query("INSERT INTO auction_items (name, image_url, base_price, status, order_index) VALUES ('Raspberry Pi Pico', 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=400&q=80', 400.00, 'pending', 3)");
-  await query("INSERT INTO auction_items (name, image_url, base_price, status, order_index) VALUES ('Arduino Uno', 'https://images.unsplash.com/photo-1591799264318-7e6ef8ddb7ea?w=400&q=80', 300.00, 'pending', 4)");
-  await query("INSERT INTO auction_items (name, image_url, base_price, status, order_index) VALUES ('16x2 LCD Display', 'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=400&q=80', 100.00, 'pending', 5)");
+  await query("INSERT INTO auction_items (name, image_url, base_price, status, order_index, stock) VALUES ('Servo Motor', 'https://images.unsplash.com/photo-1614064641938-3bbee52942c7?w=400&q=80', 200.00, 'pending', 1, 5)");
+  await query("INSERT INTO auction_items (name, image_url, base_price, status, order_index, stock) VALUES ('Ultrasonic Sensor', 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=400&q=80', 150.00, 'pending', 2, 5)");
+  await query("INSERT INTO auction_items (name, image_url, base_price, status, order_index, stock) VALUES ('Raspberry Pi Pico', 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=400&q=80', 400.00, 'pending', 3, 5)");
+  await query("INSERT INTO auction_items (name, image_url, base_price, status, order_index, stock) VALUES ('Arduino Uno', 'https://images.unsplash.com/photo-1591799264318-7e6ef8ddb7ea?w=400&q=80', 300.00, 'pending', 4, 5)");
+  await query("INSERT INTO auction_items (name, image_url, base_price, status, order_index, stock) VALUES ('16x2 LCD Display', 'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=400&q=80', 100.00, 'pending', 5, 5)");
 
   const initialState = { status: 'idle', currentItemId: null, timer: 0, highestBid: null, highestBidderTeamId: null, highestBidderName: null };
   await query("INSERT INTO auction_state (key, value) VALUES ($1, $2)", ['current_state', JSON.stringify(initialState)]);
@@ -535,11 +551,11 @@ function initFallbackSchema() {
     ];
 
     fallbackData.auction_items = [
-      { id: 1, name: 'Servo Motor', image_url: 'https://images.unsplash.com/photo-1614064641938-3bbee52942c7?w=400&q=80', base_price: 200.00, status: 'pending', winning_team_id: null, final_price: null, order_index: 1 },
-      { id: 2, name: 'Ultrasonic Sensor', image_url: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=400&q=80', base_price: 150.00, status: 'pending', winning_team_id: null, final_price: null, order_index: 2 },
-      { id: 3, name: 'Raspberry Pi Pico', image_url: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=400&q=80', base_price: 400.00, status: 'pending', winning_team_id: null, final_price: null, order_index: 3 },
-      { id: 4, name: 'Arduino Uno', image_url: 'https://images.unsplash.com/photo-1591799264318-7e6ef8ddb7ea?w=400&q=80', base_price: 300.00, status: 'pending', winning_team_id: null, final_price: null, order_index: 4 },
-      { id: 5, name: '16x2 LCD Display', image_url: 'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=400&q=80', base_price: 100.00, status: 'pending', winning_team_id: null, final_price: null, order_index: 5 },
+      { id: 1, name: 'Servo Motor', image_url: 'https://images.unsplash.com/photo-1614064641938-3bbee52942c7?w=400&q=80', base_price: 200.00, status: 'pending', winning_team_id: null, final_price: null, order_index: 1, stock: 5 },
+      { id: 2, name: 'Ultrasonic Sensor', image_url: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=400&q=80', base_price: 150.00, status: 'pending', winning_team_id: null, final_price: null, order_index: 2, stock: 5 },
+      { id: 3, name: 'Raspberry Pi Pico', image_url: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=400&q=80', base_price: 400.00, status: 'pending', winning_team_id: null, final_price: null, order_index: 3, stock: 5 },
+      { id: 4, name: 'Arduino Uno', image_url: 'https://images.unsplash.com/photo-1591799264318-7e6ef8ddb7ea?w=400&q=80', base_price: 300.00, status: 'pending', winning_team_id: null, final_price: null, order_index: 4, stock: 5 },
+      { id: 5, name: '16x2 LCD Display', image_url: 'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=400&q=80', base_price: 100.00, status: 'pending', winning_team_id: null, final_price: null, order_index: 5, stock: 5 },
     ];
 
     fallbackData.auction_state = {

@@ -21,6 +21,7 @@ interface AuctionItem {
   status: 'pending' | 'active' | 'sold' | 'unsold';
   winning_team_id: number | null;
   final_price: number | null;
+  stock: number;
 }
 
 export const TeamDashboard: React.FC = () => {

@@ -25,6 +25,7 @@ export interface AuctionItem {
   winning_team_id: number | null;
   final_price: number | null;
   order_index?: number;
+  stock: number;
 }
 
 export interface Bid {

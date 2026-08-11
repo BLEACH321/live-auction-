@@ -149,7 +149,7 @@ app.get('/api/items', async (req: Request, res: Response) => {
 
 // Admin: Add an auction item
 app.post('/api/admin/items', authenticateToken, requireRole('admin'), async (req: Request, res: Response) => {
-  const { name, imageUrl, basePrice } = req.body;
+  const { name, imageUrl, basePrice, stock } = req.body;
 
   if (!name || basePrice === undefined) {
     return res.status(400).json({ error: 'Name and base price are required' });
@@ -160,14 +160,19 @@ app.post('/api/admin/items', authenticateToken, requireRole('admin'), async (req
     return res.status(400).json({ error: 'Invalid base price' });
   }
 
+  const qty = stock !== undefined ? Number(stock) : 1;
+  if (isNaN(qty) || qty < 0) {
+    return res.status(400).json({ error: 'Invalid stock value' });
+  }
+
   try {
     // Get max order index
     const maxOrderRes = await query('SELECT MAX(order_index) FROM auction_items');
     const nextOrder = (maxOrderRes.rows[0].max || 0) + 1;
 
     await query(
-      'INSERT INTO auction_items (name, image_url, base_price, status, order_index) VALUES ($1, $2, $3, $4, $5)',
-      [name, imageUrl || null, price, 'pending', nextOrder]
+      'INSERT INTO auction_items (name, image_url, base_price, status, order_index, stock) VALUES ($1, $2, $3, $4, $5, $6)',
+      [name, imageUrl || null, price, 'pending', nextOrder, qty]
     );
 
     // Notify clients of item list change
@@ -178,6 +183,33 @@ app.post('/api/admin/items', authenticateToken, requireRole('admin'), async (req
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: 'Failed to add item' });
+  }
+});
+
+// Admin: Update component stock
+app.post('/api/admin/items/stock', authenticateToken, requireRole('admin'), async (req: Request, res: Response) => {
+  const { itemId, stock } = req.body;
+
+  if (itemId === undefined || stock === undefined) {
+    return res.status(400).json({ error: 'Item ID and stock are required' });
+  }
+
+  const qty = Number(stock);
+  if (isNaN(qty) || qty < 0) {
+    return res.status(400).json({ error: 'Invalid stock value' });
+  }
+
+  try {
+    await query('UPDATE auction_items SET stock = $1 WHERE id = $2', [qty, itemId]);
+
+    // Notify clients of item list change
+    const allItems = await query('SELECT * FROM auction_items ORDER BY order_index ASC, id ASC');
+    io.emit('items:update', allItems.rows);
+
+    return res.json({ success: true, message: 'Stock updated successfully' });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: 'Failed to update component stock' });
   }
 });
 

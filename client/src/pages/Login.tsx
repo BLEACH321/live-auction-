@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Terminal, Shield, Users } from 'lucide-react';
+import { Terminal } from 'lucide-react';
 
 export const Login: React.FC = () => {
   const { login } = useAuth();
@@ -100,21 +100,7 @@ export const Login: React.FC = () => {
           </button>
         </form>
 
-        <div className="mt-8 pt-6 border-t border-arena-border">
-          <p className="text-[10px] text-center text-arena-textMuted mb-3 font-mono tracking-widest uppercase">
-            DEMO ACCESS CREDENTIALS
-          </p>
-          <div className="grid grid-cols-3 gap-2 text-[10px] text-slate-400 font-mono">
-            <div className="p-2 bg-arena-bg/50 rounded border border-arena-border">
-              <span className="font-semibold text-white flex items-center gap-1"><Shield size={10} className="text-arena-accent" /> Admin:</span>
-              admin / admin123
-            </div>
-            <div className="p-2 bg-arena-bg/50 rounded border border-arena-border col-span-2">
-              <span className="font-semibold text-white flex items-center gap-1"><Users size={10} className="text-arena-glow" /> Teams: (Pass: team123)</span>
-              teama (Alpha) \| teamb (Beta) \| teamc (Gamma)
-            </div>
-          </div>
-        </div>
+
       </div>
     </div>
   );
