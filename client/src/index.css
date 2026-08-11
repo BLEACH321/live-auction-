@@ -1,0 +1,67 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-arena-bg text-slate-100 font-sans antialiased;
+    background-image: linear-gradient(rgba(18, 16, 26, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+    background-size: 100% 4px;
+    margin: 0;
+    padding: 0;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display;
+  }
+
+  /* Selection override */
+  ::selection {
+    background-color: #ff6b00;
+    color: #000000;
+  }
+}
+
+/* Custom glow borders and technical decorations */
+.glow-border {
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.15);
+  border: 1px solid rgba(0, 240, 255, 0.3);
+}
+
+.glow-border-orange {
+  box-shadow: 0 0 15px rgba(255, 107, 0, 0.15);
+  border: 1px solid rgba(255, 107, 0, 0.3);
+}
+
+.glow-border-pink {
+  box-shadow: 0 0 15px rgba(255, 26, 64, 0.15);
+  border: 1px solid rgba(255, 26, 64, 0.3);
+}
+
+.glow-text {
+  text-shadow: 0 0 8px rgba(0, 240, 255, 0.5);
+}
+
+.glow-text-orange {
+  text-shadow: 0 0 8px rgba(255, 107, 0, 0.5);
+}
+
+.glow-text-pink {
+  text-shadow: 0 0 8px rgba(255, 26, 64, 0.5);
+}
+
+/* Technical scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #07080c;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #ff6b00;
+}

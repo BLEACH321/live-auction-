@@ -1,0 +1,24 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "username": "admin",
+      "password_hash": "$2a$10$4J9UtAmjopPbZ1Q3La9isedoswFNrnBfLpekmIsEdUycxYTwX6BLW",
+      "role": "admin"
+    }
+  ],
+  "teams": [],
+  "auction_items": [],
+  "bids": [],
+  "purchases": [],
+  "auction_state": {
+    "current_state": {
+      "status": "idle",
+      "currentItemId": null,
+      "timer": 0,
+      "highestBid": null,
+      "highestBidderTeamId": null,
+      "highestBidderName": null
+    }
+  }
+}
