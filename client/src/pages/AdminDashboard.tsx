@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSocket } from '../context/SocketContext';
 import { useAuth } from '../context/AuthContext';
+import { API_URL } from '../config';
 import { Play, Pause, Square, Trash2, Plus, UserPlus, DollarSign, Shield, Activity, Clock, ArrowRight, ChevronDown } from 'lucide-react';
 
 interface Team {
@@ -78,11 +79,11 @@ export const AdminDashboard: React.FC = () => {
   // Fetch initial teams and items
   const fetchData = async () => {
     try {
-      const teamsRes = await fetch('http://localhost:5000/api/teams');
+      const teamsRes = await fetch(`${API_URL}/api/teams`);
       const teamsData = await teamsRes.json();
       setTeams(teamsData);
 
-      const itemsRes = await fetch('http://localhost:5000/api/items');
+      const itemsRes = await fetch(`${API_URL}/api/items`);
       const itemsData = await itemsRes.json();
       setItems(itemsData);
     } catch (e) {
@@ -131,7 +132,7 @@ export const AdminDashboard: React.FC = () => {
     setSuccessMsg(null);
 
     try {
-      const res = await fetch('http://localhost:5000/api/admin/teams', {
+      const res = await fetch(`${API_URL}/api/admin/teams`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -242,7 +243,7 @@ export const AdminDashboard: React.FC = () => {
         setBulkStatus({ type: 'info', message: `Uploading ${i + 1}/${parsedTeams.length}: ${team.name}...` });
 
         try {
-          const response = await fetch('http://localhost:5000/api/admin/teams', {
+          const response = await fetch(`${API_URL}/api/admin/teams`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -300,7 +301,7 @@ export const AdminDashboard: React.FC = () => {
     setSuccessMsg(null);
 
     try {
-      const res = await fetch('http://localhost:5000/api/admin/items', {
+      const res = await fetch(`${API_URL}/api/admin/items`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -406,7 +407,7 @@ export const AdminDashboard: React.FC = () => {
         setBulkItemStatus({ type: 'info', message: `Uploading ${i + 1}/${parsedItems.length}: ${item.name}...` });
 
         try {
-          const response = await fetch('http://localhost:5000/api/admin/items', {
+          const response = await fetch(`${API_URL}/api/admin/items`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -451,7 +452,7 @@ export const AdminDashboard: React.FC = () => {
     setSuccessMsg(null);
 
     try {
-      const res = await fetch('http://localhost:5000/api/admin/teams/budget', {
+      const res = await fetch(`${API_URL}/api/admin/teams/budget`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -542,7 +543,7 @@ export const AdminDashboard: React.FC = () => {
     setErrorMsg(null);
     setSuccessMsg(null);
     try {
-      const res = await fetch('http://localhost:5000/api/admin/reset-system', {
+      const res = await fetch(`${API_URL}/api/admin/reset-system`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

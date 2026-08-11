@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Trophy, Award, List, RefreshCw } from 'lucide-react';
 
+import { API_URL } from '../config';
+
 interface SoldItem {
   id: number;
   name: string;
@@ -29,7 +31,7 @@ export const Results: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('http://localhost:5000/api/results');
+      const res = await fetch(`${API_URL}/api/results`);
       if (!res.ok) {
         throw new Error('Failed to fetch results from database');
       }

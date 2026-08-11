@@ -3,6 +3,8 @@ import { useSocket } from '../context/SocketContext';
 import { useAuth } from '../context/AuthContext';
 import { Clock, Trophy, History, CheckCircle, AlertTriangle } from 'lucide-react';
 
+import { API_URL } from '../config';
+
 interface Team {
   id: number;
   name: string;
@@ -35,12 +37,12 @@ export const TeamDashboard: React.FC = () => {
   const fetchTeamAndItems = async () => {
     if (!user?.teamId) return;
     try {
-      const teamsRes = await fetch('http://localhost:5000/api/teams');
+      const teamsRes = await fetch(`${API_URL}/api/teams`);
       const teamsData = await teamsRes.json();
       const myTeam = teamsData.find((t: any) => t.id === user.teamId);
       if (myTeam) setTeamInfo(myTeam);
 
-      const itemsRes = await fetch('http://localhost:5000/api/items');
+      const itemsRes = await fetch(`${API_URL}/api/items`);
       const itemsData = await itemsRes.json();
       setItems(itemsData);
     } catch (e) {
