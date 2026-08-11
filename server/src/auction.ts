@@ -15,6 +15,7 @@ let state: LiveAuctionState = {
   highestBidderName: null,
   bidDeadline: null,
   initialDuration: 30,
+  currentQuantity: 1,
 };
 
 let activeItemBasePrice: number = 0;
@@ -96,6 +97,7 @@ export async function loadStateFromDb() {
     const res = await query('SELECT value FROM auction_state WHERE key = $1', ['current_state']);
     if (res.rows.length > 0) {
       state = res.rows[0].value;
+      state.currentQuantity = state.currentQuantity || 1;
       console.log('Restored auction state:', state);
 
       // If it was running, we set it to paused so it doesn't run with dead intervals
@@ -170,17 +172,17 @@ async function handleTimerExpiry() {
 
       // Insert purchase log first
       await query(
-        `INSERT INTO purchases (item_id, team_id, price) 
-         VALUES ($1, $2, $3)`,
-        [itemId, teamId, winningBid]
+        `INSERT INTO purchases (item_id, team_id, price, quantity) 
+         VALUES ($1, $2, $3, $4)`,
+        [itemId, teamId, winningBid, state.currentQuantity || 1]
       );
 
       // Check remaining stock
       const itemRes = await query('SELECT stock FROM auction_items WHERE id = $1', [itemId]);
       const totalStock = itemRes.rows[0]?.stock || 1;
       
-      const purchaseCountRes = await query('SELECT COUNT(*) FROM purchases WHERE item_id = $1', [itemId]);
-      const purchaseCount = parseInt(purchaseCountRes.rows[0].count, 10);
+      const purchaseCountRes = await query('SELECT SUM(COALESCE(quantity, 1)) FROM purchases WHERE item_id = $1', [itemId]);
+      const purchaseCount = parseInt(purchaseCountRes.rows[0].sum || '0', 10);
 
       if (purchaseCount >= totalStock) {
         // All stock sold out! Mark as sold
@@ -446,7 +448,7 @@ export function initAuction(io: Server) {
     // --- ADMIN EVENTS ---
     
     // Start component bidding
-    socket.on('admin:start', async (data: { itemId: number; duration: number }, callback: Function) => {
+    socket.on('admin:start', async (data: { itemId: number; duration: number; quantity?: number }, callback: Function) => {
       if (user.role !== 'admin') {
         return callback({ error: 'Unauthorized command' });
       }
@@ -458,6 +460,17 @@ export function initAuction(io: Server) {
         }
 
         const item = itemRes.rows[0];
+        
+        // Calculate remaining stock
+        const purchasesCountRes = await query('SELECT SUM(COALESCE(quantity, 1)) FROM purchases WHERE item_id = $1', [data.itemId]);
+        const soldQty = parseInt(purchasesCountRes.rows[0].sum || '0', 10);
+        const remainingStock = item.stock - soldQty;
+
+        const reqQty = Number(data.quantity) || 1;
+        if (reqQty <= 0 || reqQty > remainingStock) {
+          return callback({ error: `Invalid quantity. Maximum available is ${remainingStock}.` });
+        }
+
         activeItemBasePrice = Number(item.base_price);
 
         await query("UPDATE auction_items SET status = 'active' WHERE id = $1", [data.itemId]);
@@ -472,13 +485,14 @@ export function initAuction(io: Server) {
         state.highestBid = null;
         state.highestBidderTeamId = null;
         state.highestBidderName = null;
+        state.currentQuantity = reqQty;
 
         await saveStateToDb();
         startCountdown();
         await broadcastState();
 
         callback({ success: true });
-        console.log(`Admin launched component ${item.name}`);
+        console.log(`Admin launched component ${item.name} with quantity ${reqQty}`);
       } catch (e) {
         console.error(e);
         callback({ error: 'Failed to launch component auction' });

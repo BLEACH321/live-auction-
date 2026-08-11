@@ -7,7 +7,7 @@ import { AdminDashboard } from './pages/AdminDashboard';
 import { TeamDashboard } from './pages/TeamDashboard';
 import { PublicLive } from './pages/PublicLive';
 import { Results } from './pages/Results';
-import { Terminal, Shield, Users, Radio, Trophy, LogOut, LogIn } from 'lucide-react';
+import { Terminal, Shield, Users, Trophy, LogOut, LogIn } from 'lucide-react';
 
 // Protected Route Guard
 const ProtectedRoute: React.FC<{ children: React.ReactNode; allowedRole: 'admin' | 'team' }> = ({ children, allowedRole }) => {
@@ -29,7 +29,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; allowedRole: 'admin'
     // If not matching, redirect to their default home
     if (user.role === 'admin') return <Navigate to="/admin" replace />;
     if (user.role === 'team') return <Navigate to="/team" replace />;
-    return <Navigate to="/live" replace />;
+    return <Navigate to="/results" replace />;
   }
 
   return <>{children}</>;
@@ -78,15 +78,6 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                     <Users size={13} /> BID BLOCK
                   </Link>
                 )}
-
-                <Link
-                  to="/live"
-                  className={`px-3 py-1.5 rounded text-xs font-bold tracking-wider flex items-center gap-1 transition-all ${
-                    isLinkActive('/live') ? 'bg-arena-accent text-white shadow-[0_0_10px_rgba(255,107,0,0.3)]' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
-                  }`}
-                >
-                  <Radio size={13} /> LIVE VIEW
-                </Link>
 
                 <Link
                   to="/results"
@@ -145,9 +136,6 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               BID
             </Link>
           )}
-          <Link to="/live" className={`p-1 text-[10px] font-bold ${isLinkActive('/live') ? 'text-arena-accent' : 'text-slate-400'}`}>
-            LIVE
-          </Link>
           <Link to="/results" className={`p-1 text-[10px] font-bold ${isLinkActive('/results') ? 'text-arena-accent' : 'text-slate-400'}`}>
             RESULTS
           </Link>
@@ -180,7 +168,7 @@ const HomeRedirect: React.FC = () => {
 
   if (user.role === 'admin') return <Navigate to="/admin" replace />;
   if (user.role === 'team') return <Navigate to="/team" replace />;
-  return <Navigate to="/live" replace />;
+  return <Navigate to="/results" replace />;
 };
 
 function App() {

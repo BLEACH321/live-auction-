@@ -46,4 +46,5 @@ export interface LiveAuctionState {
   highestBidderName: string | null;
   bidDeadline: number | null;
   initialDuration: number;
+  currentQuantity: number;
 }

@@ -86,6 +86,10 @@ export const AdminDashboard: React.FC = () => {
   // Selected item to start auction
   const [selectedItemId, setSelectedItemId] = useState<number | ''>('');
   const [auctionDuration, setAuctionDuration] = useState('30');
+  const [auctionQuantity, setAuctionQuantity] = useState('1');
+
+  // Acquisitions / Component Occupancy List
+  const [purchases, setPurchases] = useState<any[]>([]);
 
   // Logs
   const [recentBids, setRecentBids] = useState<any[]>([]);
@@ -104,6 +108,10 @@ export const AdminDashboard: React.FC = () => {
       const itemsRes = await fetch(`${API_URL}/api/items`);
       const itemsData = await itemsRes.json();
       setItems(itemsData);
+
+      const purchasesRes = await fetch(`${API_URL}/api/purchases`);
+      const purchasesData = await purchasesRes.json();
+      setPurchases(purchasesData);
     } catch (e) {
       console.error('Error fetching dashboard lists:', e);
     }
@@ -139,12 +147,22 @@ export const AdminDashboard: React.FC = () => {
       setRecentBids([]);
     });
 
+    socket.on('auction:sold', () => {
+      fetchData();
+    });
+
+    socket.on('auction:unsold', () => {
+      fetchData();
+    });
+
     return () => {
       socket.off('auction:state');
       socket.off('teams:update');
       socket.off('auction:timer');
       socket.off('items:update');
       socket.off('system:reset');
+      socket.off('auction:sold');
+      socket.off('auction:unsold');
     };
   }, [socket]);
 
@@ -579,7 +597,11 @@ export const AdminDashboard: React.FC = () => {
   // Socket triggers
   const handleStartAuction = () => {
     if (!socket || !selectedItemId) return;
-    socket.emit('admin:start', { itemId: selectedItemId, duration: parseInt(auctionDuration) }, (res: any) => {
+    socket.emit('admin:start', { 
+      itemId: selectedItemId, 
+      duration: parseInt(auctionDuration),
+      quantity: parseInt(auctionQuantity)
+    }, (res: any) => {
       if (res?.error) {
         setErrorMsg(res.error);
       } else {
@@ -1120,13 +1142,29 @@ export const AdminDashboard: React.FC = () => {
                   <ArrowRight size={10} /> Next Component
                 </button>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-[10px] text-arena-textMuted mb-1">SELECT COMPONENT</label>
                   <div className="relative group">
                     <select
                       value={selectedItemId}
-                      onChange={(e) => setSelectedItemId(e.target.value ? Number(e.target.value) : '')}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (!val) {
+                          setSelectedItemId('');
+                          setAuctionQuantity('1');
+                          return;
+                        }
+                        const id = Number(val);
+                        setSelectedItemId(id);
+                        const item = items.find(i => i.id === id);
+                        if (item) {
+                          const maxStock = item.remaining_stock !== undefined ? item.remaining_stock : item.stock;
+                          setAuctionQuantity(Math.min(1, maxStock).toString());
+                        } else {
+                          setAuctionQuantity('1');
+                        }
+                      }}
                       className="w-full px-3 py-2 bg-arena-bg border border-arena-border rounded text-sm text-white focus:outline-none focus:border-arena-accent appearance-none pr-10 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                       disabled={auctionState?.status === 'running' || auctionState?.status === 'paused'}
                     >
@@ -1141,6 +1179,18 @@ export const AdminDashboard: React.FC = () => {
                       <ChevronDown size={16} className="transition-transform duration-300 group-focus-within:rotate-180" />
                     </div>
                   </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] text-arena-textMuted mb-1">QTY TO AUCTION</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max={selectedItemId ? (items.find(i => i.id === selectedItemId)?.remaining_stock ?? items.find(i => i.id === selectedItemId)?.stock ?? 1) : 1}
+                    value={auctionQuantity}
+                    onChange={(e) => setAuctionQuantity(e.target.value)}
+                    className="w-full px-3 py-2 bg-arena-bg border border-arena-border rounded text-sm text-white focus:outline-none focus:border-arena-accent"
+                    disabled={auctionState?.status === 'running' || auctionState?.status === 'paused'}
+                  />
                 </div>
                 <div>
                   <label className="block text-[10px] text-arena-textMuted mb-1">TIMER (SECONDS)</label>
@@ -1266,6 +1316,30 @@ export const AdminDashboard: React.FC = () => {
               {teams.length === 0 && (
                 <div className="text-center py-4 text-arena-textMuted text-xs font-mono">
                   No teams registered.
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Component Assignments / Occupancy List */}
+          <div className="bg-arena-panel rounded-lg border border-arena-border p-5">
+            <h2 className="text-sm font-bold text-white uppercase tracking-wider mb-3">Component Assignments</h2>
+            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+              {purchases.length > 0 ? (
+                purchases.map((p) => (
+                  <div key={p.purchase_id} className="p-2.5 bg-arena-bg rounded border border-arena-border flex justify-between items-center text-xs font-mono">
+                    <div>
+                      <h4 className="font-bold text-white uppercase">{p.team_name}</h4>
+                      <span className="text-[10px] text-arena-textMuted">{p.name} (Qty: {p.quantity || 1})</span>
+                    </div>
+                    <span className="font-bold text-emerald-400">
+                      {p.final_price} Coins
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-4 text-arena-textMuted text-xs font-mono">
+                  No components occupied yet.
                 </div>
               )}
             </div>

@@ -178,7 +178,7 @@ app.get('/api/items', async (req: Request, res: Response) => {
   try {
     const itemsRes = await query(
       `SELECT ai.*, 
-              (ai.stock - COALESCE((SELECT COUNT(*) FROM purchases WHERE item_id = ai.id), 0))::integer as remaining_stock
+              (ai.stock - COALESCE((SELECT SUM(COALESCE(quantity, 1)) FROM purchases WHERE item_id = ai.id), 0))::integer as remaining_stock
        FROM auction_items ai 
        ORDER BY ai.order_index ASC, ai.id ASC`
     );

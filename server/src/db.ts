@@ -126,7 +126,9 @@ function querySimulator(text: string, params: any[] = []): { rows: any[] } {
       return diff !== 0 ? diff : a.id - b.id;
     });
     const mapped = sorted.map(item => {
-      const purchaseCount = fallbackData.purchases.filter(p => p.item_id === item.id).length;
+      const purchaseCount = fallbackData.purchases
+        .filter(p => p.item_id === item.id)
+        .reduce((sum, p) => sum + (p.quantity || 1), 0);
       return {
         ...item,
         remaining_stock: item.stock - purchaseCount
@@ -222,14 +224,17 @@ function querySimulator(text: string, params: any[] = []): { rows: any[] } {
     return { rows: [newBid] };
   }
 
-  // 17. Insert Purchase
-  if (queryClean.includes('INSERT INTO purchases (item_id, team_id, price) VALUES ($1, $2, $3)')) {
+  // 17. Insert Purchase (supports quantity parameter)
+  if (queryClean.includes('INSERT INTO purchases (item_id, team_id, price, quantity) VALUES ($1, $2, $3, $4)') ||
+      queryClean.includes('INSERT INTO purchases (item_id, team_id, price) VALUES ($1, $2, $3)')) {
     const id = fallbackData.purchases.length + 1;
+    const isExtended = queryClean.includes('quantity');
     const newPurchase = {
       id,
       item_id: params[0],
       team_id: params[1],
       price: Number(params[2]),
+      quantity: isExtended ? Number(params[3]) : 1,
       purchase_time: new Date()
     };
     fallbackData.purchases.push(newPurchase);
@@ -575,8 +580,13 @@ export async function initDatabase() {
       item_id INTEGER REFERENCES auction_items(id) ON DELETE CASCADE,
       team_id INTEGER REFERENCES teams(id) ON DELETE CASCADE,
       price DECIMAL(12, 2) NOT NULL,
+      quantity INTEGER DEFAULT 1,
       purchase_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
+  `);
+
+  await query(`
+    ALTER TABLE purchases ADD COLUMN IF NOT EXISTS quantity INTEGER DEFAULT 1;
   `);
 
   await query(`
