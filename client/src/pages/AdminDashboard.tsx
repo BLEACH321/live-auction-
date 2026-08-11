@@ -370,7 +370,7 @@ export const AdminDashboard: React.FC = () => {
     const nameIdx = headers.findIndex(h => h.includes('name') || h === 'item');
     const imageIdx = headers.findIndex(h => h.includes('image') || h.includes('url') || h === 'img');
     const priceIdx = headers.findIndex(h => h.includes('price') || h.includes('base') || h.includes('reserve') || h.includes('cost'));
-    const stockIdx = headers.findIndex(h => h.includes('stock') || h.includes('qty') || h.includes('quantity') || h.includes('count'));
+    const stockIdx = headers.findIndex(h => h.includes('stock') || h.includes('qty') || h.includes('quantity') || h.includes('qunatity') || h.includes('quan') || h.includes('quna') || h.includes('count'));
 
     if (nameIdx === -1 || priceIdx === -1) {
       throw new Error('CSV columns must include: name, basePrice');
