@@ -177,9 +177,10 @@ async function handleTimerExpiry() {
         [itemId, teamId, winningBid, state.currentQuantity || 1]
       );
 
-      // Check remaining stock
-      const itemRes = await query('SELECT stock FROM auction_items WHERE id = $1', [itemId]);
+      // Check remaining stock and fetch item name
+      const itemRes = await query('SELECT name, stock FROM auction_items WHERE id = $1', [itemId]);
       const totalStock = itemRes.rows[0]?.stock || 1;
+      const itemName = itemRes.rows[0]?.name || 'Component';
       
       const purchaseCountRes = await query('SELECT SUM(COALESCE(quantity, 1)) FROM purchases WHERE item_id = $1', [itemId]);
       const purchaseCount = parseInt(purchaseCountRes.rows[0].sum || '0', 10);
@@ -229,6 +230,7 @@ async function handleTimerExpiry() {
       if (ioInstance) {
         ioInstance.emit('auction:sold', {
           itemId,
+          itemName,
           winningTeamId: teamId,
           winningTeamName: team.name,
           price: winningBid,
@@ -241,6 +243,9 @@ async function handleTimerExpiry() {
       console.log(`Item ${itemId} SOLD to Team ID ${teamId} for ${winningBid} Coins.`);
     } else {
       // Unsold
+      const itemRes = await query('SELECT name FROM auction_items WHERE id = $1', [itemId]);
+      const itemName = itemRes.rows[0]?.name || 'Component';
+
       await query("UPDATE auction_items SET status = 'unsold' WHERE id = $1", [itemId]);
       
       state.status = 'idle';
@@ -255,10 +260,10 @@ async function handleTimerExpiry() {
       await broadcastState();
 
       if (ioInstance) {
-        ioInstance.emit('auction:unsold', { itemId });
+        ioInstance.emit('auction:unsold', { itemId, itemName });
       }
 
-      console.log(`Item ${itemId} went UNSOLD`);
+      console.log(`Item ${itemId} (${itemName}) went UNSOLD`);
     }
   } catch (error) {
     await query('ROLLBACK');
@@ -402,9 +407,9 @@ export function initAuction(io: Server) {
       state.highestBidderTeamId = user.teamId;
       state.highestBidderName = cachedTeam.name;
 
-      // Every valid bid sets a 5-second response window
-      state.bidDeadline = Date.now() + 5000;
-      state.timer = 5;
+      // Every valid bid sets a 8-second response window
+      state.bidDeadline = Date.now() + 8000;
+      state.timer = 8;
 
       if (ioInstance) {
         ioInstance.emit('auction:timer', { timer: state.timer, bidDeadline: state.bidDeadline });

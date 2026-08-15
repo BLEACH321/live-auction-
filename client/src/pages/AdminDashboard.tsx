@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSocket } from '../context/SocketContext';
 import { useAuth } from '../context/AuthContext';
 import { API_URL, resolveImageUrl } from '../config';
-import { Play, Pause, Square, Trash2, Plus, UserPlus, DollarSign, Shield, Activity, Clock, ArrowRight, ChevronDown, Eye, EyeOff } from 'lucide-react';
+import { Play, Pause, Square, Trash2, Plus, UserPlus, DollarSign, Shield, Activity, Clock, ArrowRight, ChevronDown, Eye, EyeOff, Trophy, AlertTriangle } from 'lucide-react';
 
 interface Team {
   id: number;
@@ -56,6 +56,13 @@ export const AdminDashboard: React.FC = () => {
   const [teamPass, setTeamPass] = useState('');
   const [showTeamPass, setShowTeamPass] = useState(false);
   const [teamBudget, setTeamBudget] = useState('2000');
+  const [soldModal, setSoldModal] = useState<{
+    show: boolean;
+    itemName: string;
+    teamName: string;
+    price: number;
+    isUnsold: boolean;
+  } | null>(null);
   
   // Bulk upload states
   const [teamAddMode, setTeamAddMode] = useState<'single' | 'bulk'>('single');
@@ -148,11 +155,27 @@ export const AdminDashboard: React.FC = () => {
       setRecentBids([]);
     });
 
-    socket.on('auction:sold', () => {
+    socket.on('auction:sold', (data: any) => {
+      setSoldModal({
+        show: true,
+        itemName: data.itemName || 'Component',
+        teamName: data.winningTeamName,
+        price: data.price,
+        isUnsold: false
+      });
+      setTimeout(() => setSoldModal(null), 5000);
       fetchData();
     });
 
-    socket.on('auction:unsold', () => {
+    socket.on('auction:unsold', (data: any) => {
+      setSoldModal({
+        show: true,
+        itemName: data.itemName || 'Component',
+        teamName: '',
+        price: 0,
+        isUnsold: true
+      });
+      setTimeout(() => setSoldModal(null), 5000);
       fetchData();
     });
 
@@ -1389,6 +1412,62 @@ export const AdminDashboard: React.FC = () => {
         </div>
 
       </div>
+
+      {/* Sold/Unsold Modal Overlay */}
+      {soldModal && soldModal.show && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-arena-panel border-2 border-arena-accent p-8 rounded-lg max-w-md w-full text-center shadow-[0_0_50px_rgba(255,107,0,0.4)] relative overflow-hidden animate-[scaleIn_0.3s_ease-out]">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-arena-accent to-transparent"></div>
+            
+            {soldModal.isUnsold ? (
+              <div className="space-y-6">
+                <div className="w-16 h-16 bg-red-500/10 border border-red-500/30 rounded-full flex items-center justify-center mx-auto text-red-500 animate-pulse">
+                  <AlertTriangle size={36} />
+                </div>
+                <div>
+                  <span className="text-[10px] font-mono text-arena-textMuted uppercase tracking-widest">// AUCTION CONCLUDED</span>
+                  <h2 className="text-3xl font-display font-black text-red-500 mt-1 uppercase tracking-wide">PASSED UNSOLD</h2>
+                  <p className="text-sm text-slate-300 mt-3 font-mono">
+                    No valid bids were recorded for <span className="text-white font-bold">{soldModal.itemName}</span>.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div className="w-16 h-16 bg-emerald-500/10 border border-emerald-500/30 rounded-full flex items-center justify-center mx-auto text-arena-glowGreen animate-bounce">
+                  <Trophy size={36} />
+                </div>
+                <div>
+                  <span className="text-[10px] font-mono text-arena-textMuted uppercase tracking-widest">// GRID TRANSACTION SUCCESS</span>
+                  <h2 className="text-2xl font-display font-black text-arena-glowGreen mt-1 uppercase tracking-wide">COMPONENT SOLD!</h2>
+                  
+                  <div className="mt-4 p-4 bg-arena-bg rounded border border-arena-border text-left font-mono space-y-2">
+                    <div className="flex justify-between border-b border-arena-border/30 pb-2">
+                      <span className="text-xs text-arena-textMuted font-mono">COMPONENT:</span>
+                      <span className="text-sm font-bold text-white uppercase">{soldModal.itemName}</span>
+                    </div>
+                    <div className="flex justify-between border-b border-arena-border/30 pb-2">
+                      <span className="text-xs text-arena-textMuted font-mono">ACQUIRED BY:</span>
+                      <span className="text-sm font-bold text-arena-glow uppercase">{soldModal.teamName}</span>
+                    </div>
+                    <div className="flex justify-between pt-1">
+                      <span className="text-xs text-arena-textMuted font-mono">PRICE PAID:</span>
+                      <span className="text-sm font-bold text-arena-glowGreen">{soldModal.price} Coins</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            <button
+              onClick={() => setSoldModal(null)}
+              className="mt-6 w-full py-2 bg-arena-border hover:bg-arena-accent text-white font-bold rounded text-xs tracking-wider uppercase transition-colors cursor-pointer"
+            >
+              Close Feed
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
