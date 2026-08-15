@@ -1381,6 +1381,7 @@ export const AdminDashboard: React.FC = () => {
                     <span className="text-[10px] text-arena-textMuted font-mono">STOCK:</span>
                     <div className="flex items-center gap-1">
                       <input
+                        key={`${item.id}-${item.stock}`}
                         type="number"
                         min="0"
                         className="w-12 px-1 py-0.5 bg-arena-panel border border-arena-border text-center text-white rounded text-[10px] focus:outline-none focus:border-arena-accent font-mono"
