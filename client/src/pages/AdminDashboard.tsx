@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSocket } from '../context/SocketContext';
 import { useAuth } from '../context/AuthContext';
 import { API_URL } from '../config';
-import { Play, Pause, Square, Trash2, Plus, UserPlus, DollarSign, Shield, Activity, Clock, ArrowRight, ChevronDown } from 'lucide-react';
+import { Play, Pause, Square, Trash2, Plus, UserPlus, DollarSign, Shield, Activity, Clock, ArrowRight, ChevronDown, Eye, EyeOff } from 'lucide-react';
 
 interface Team {
   id: number;
@@ -54,6 +54,7 @@ export const AdminDashboard: React.FC = () => {
   const [teamName, setTeamName] = useState('');
   const [teamUser, setTeamUser] = useState('');
   const [teamPass, setTeamPass] = useState('');
+  const [showTeamPass, setShowTeamPass] = useState(false);
   const [teamBudget, setTeamBudget] = useState('2000');
   
   // Bulk upload states
@@ -775,14 +776,23 @@ export const AdminDashboard: React.FC = () => {
                     className="w-full px-3 py-2 bg-arena-bg border border-arena-border rounded text-sm text-white focus:outline-none focus:border-arena-accent"
                     required
                   />
-                  <input
-                    type="password"
-                    placeholder="Password"
-                    value={teamPass}
-                    onChange={(e) => setTeamPass(e.target.value)}
-                    className="w-full px-3 py-2 bg-arena-bg border border-arena-border rounded text-sm text-white focus:outline-none focus:border-arena-accent"
-                    required
-                  />
+                  <div className="relative">
+                    <input
+                      type={showTeamPass ? 'text' : 'password'}
+                      placeholder="Password"
+                      value={teamPass}
+                      onChange={(e) => setTeamPass(e.target.value)}
+                      className="w-full px-3 pr-10 py-2 bg-arena-bg border border-arena-border rounded text-sm text-white focus:outline-none focus:border-arena-accent"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowTeamPass(!showTeamPass)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white focus:outline-none cursor-pointer flex items-center justify-center"
+                    >
+                      {showTeamPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
                 </div>
                 <input
                   type="number"

@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Terminal } from 'lucide-react';
+import { Terminal, Eye, EyeOff } from 'lucide-react';
 
 export const Login: React.FC = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -81,14 +82,23 @@ export const Login: React.FC = () => {
             <label className="block text-xs font-mono uppercase tracking-wider text-slate-300">
               Password
             </label>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 bg-arena-bg border border-arena-border rounded text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-arena-accent focus:border-arena-accent text-sm font-mono"
-              placeholder="••••••••"
-            />
+            <div className="mt-1 relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="block w-full px-3 pr-10 py-2 bg-arena-bg border border-arena-border rounded text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-arena-accent focus:border-arena-accent text-sm font-mono"
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white focus:outline-none cursor-pointer flex items-center justify-center"
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
           </div>
 
           <button

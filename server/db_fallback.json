@@ -5,52 +5,9 @@
       "username": "iic student",
       "password_hash": "$2a$10$xkqHkBolm7Pq511cAMXjLeo.xLak3kZIL2AihG/6u6o.7r40LyvKC",
       "role": "admin"
-    },
-    {
-      "id": 2,
-      "username": "sunny12",
-      "password_hash": "$2a$10$ap1dFWpQNwOgvUhFhgC6SOICwicSIADSo13g3tA9xkE5yN3GmT9uK",
-      "role": "team"
-    },
-    {
-      "id": 3,
-      "username": "125",
-      "password_hash": "$2a$10$/8GH4BPiQxdwZpxuC/UiJu/3PU6EM0ASraMQ5ctilDh1tnABwXQDy",
-      "role": "team"
-    },
-    {
-      "id": 4,
-      "username": "745",
-      "password_hash": "$2a$10$2k/sOjjjSZqZ1amKuZg.y.T7mFxFIUQMaJJA75FNM8GpM0Sam7Icy",
-      "role": "team"
     }
   ],
-  "teams": [
-    {
-      "id": 1,
-      "user_id": 2,
-      "name": "sunny1",
-      "initial_budget": 3000,
-      "remaining_budget": 3000,
-      "total_spent": 0
-    },
-    {
-      "id": 2,
-      "user_id": 3,
-      "name": "123",
-      "initial_budget": 2000,
-      "remaining_budget": 1875,
-      "total_spent": 125
-    },
-    {
-      "id": 3,
-      "user_id": 4,
-      "name": "874",
-      "initial_budget": 2000,
-      "remaining_budget": 1600,
-      "total_spent": 400
-    }
-  ],
+  "teams": [],
   "auction_items": [
     {
       "id": 1,
@@ -108,94 +65,8 @@
       "stock": 6
     }
   ],
-  "bids": [
-    {
-      "id": 1,
-      "item_id": 1,
-      "team_id": 3,
-      "bid_amount": 125,
-      "bid_time": "2026-08-11T22:09:34.639Z"
-    },
-    {
-      "id": 2,
-      "item_id": 1,
-      "team_id": 2,
-      "bid_amount": 125,
-      "bid_time": "2026-08-11T22:10:39.314Z"
-    },
-    {
-      "id": 3,
-      "item_id": 1,
-      "team_id": 3,
-      "bid_amount": 125,
-      "bid_time": "2026-08-11T22:11:08.631Z"
-    },
-    {
-      "id": 4,
-      "item_id": 1,
-      "team_id": 2,
-      "bid_amount": 150,
-      "bid_time": "2026-08-11T22:11:11.480Z"
-    },
-    {
-      "id": 5,
-      "item_id": 1,
-      "team_id": 3,
-      "bid_amount": 175,
-      "bid_time": "2026-08-11T22:11:14.587Z"
-    },
-    {
-      "id": 6,
-      "item_id": 1,
-      "team_id": 2,
-      "bid_amount": 200,
-      "bid_time": "2026-08-11T22:11:17.136Z"
-    },
-    {
-      "id": 7,
-      "item_id": 1,
-      "team_id": 3,
-      "bid_amount": 225,
-      "bid_time": "2026-08-11T22:11:19.738Z"
-    },
-    {
-      "id": 8,
-      "item_id": 1,
-      "team_id": 2,
-      "bid_amount": 250,
-      "bid_time": "2026-08-11T22:11:23.361Z"
-    },
-    {
-      "id": 9,
-      "item_id": 1,
-      "team_id": 3,
-      "bid_amount": 275,
-      "bid_time": "2026-08-11T22:11:25.737Z"
-    }
-  ],
-  "purchases": [
-    {
-      "id": 1,
-      "item_id": 1,
-      "team_id": 3,
-      "price": 125,
-      "purchase_time": "2026-08-11T22:09:39.821Z"
-    },
-    {
-      "id": 2,
-      "item_id": 1,
-      "team_id": 2,
-      "price": 125,
-      "purchase_time": "2026-08-11T22:10:44.416Z"
-    },
-    {
-      "id": 3,
-      "item_id": 1,
-      "team_id": 3,
-      "price": 275,
-      "purchase_time": "2026-08-11T22:11:30.917Z"
-    }
-  ],
+  "bids": [],
+  "purchases": [],
   "auction_state": {
     "current_state": {
       "status": "idle",
@@ -203,10 +74,7 @@
       "timer": 0,
       "highestBid": null,
       "highestBidderTeamId": null,
-      "highestBidderName": null,
-      "bidDeadline": null,
-      "initialDuration": 30,
-      "currentQuantity": 1
+      "highestBidderName": null
     }
   }
 }
