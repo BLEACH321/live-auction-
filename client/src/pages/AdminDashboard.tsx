@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSocket } from '../context/SocketContext';
 import { useAuth } from '../context/AuthContext';
-import { API_URL } from '../config';
+import { API_URL, resolveImageUrl } from '../config';
 import { Play, Pause, Square, Trash2, Plus, UserPlus, DollarSign, Shield, Activity, Clock, ArrowRight, ChevronDown, Eye, EyeOff } from 'lucide-react';
 
 interface Team {
@@ -426,24 +426,6 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
-  // Resolve image URLs, Google Drive links, and local filenames
-  const resolveImageUrl = (url: string): string => {
-    if (!url) return '';
-    // Check if it is a Google Drive URL
-    const driveMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-    if (driveMatch && driveMatch[1]) {
-      return `https://docs.google.com/uc?export=view&id=${driveMatch[1]}`;
-    }
-    // Check if it's already an absolute HTTP/HTTPS URL
-    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
-      return url;
-    }
-    // If it's a relative path or filename, make sure it is relative to root
-    if (url.startsWith('/')) {
-      return url;
-    }
-    return `/${url}`;
-  };
 
   // Bulk Component Upload logic
   const parseItemCSV = (text: string) => {
@@ -1104,7 +1086,7 @@ export const AdminDashboard: React.FC = () => {
                 <div className="space-y-4">
                   <div className="flex items-center gap-3">
                     {activeItem.image_url && (
-                      <img src={activeItem.image_url} alt="" className="w-12 h-12 rounded object-cover border border-arena-border" />
+                      <img src={resolveImageUrl(activeItem.image_url)} alt="" className="w-12 h-12 rounded object-cover border border-arena-border" />
                     )}
                     <div>
                       <h3 className="font-bold text-white leading-tight">{activeItem.name}</h3>

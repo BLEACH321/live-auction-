@@ -3,7 +3,7 @@ import { useSocket } from '../context/SocketContext';
 import { useAuth } from '../context/AuthContext';
 import { Clock, Trophy, History, CheckCircle, AlertTriangle } from 'lucide-react';
 
-import { API_URL } from '../config';
+import { API_URL, resolveImageUrl } from '../config';
 
 interface Team {
   id: number;
@@ -203,7 +203,7 @@ export const TeamDashboard: React.FC = () => {
                   {/* Image wrapper */}
                   <div className="bg-arena-bg rounded border border-arena-border flex items-center justify-center p-2 h-64 overflow-hidden relative">
                     {activeItem.image_url ? (
-                      <img src={activeItem.image_url} alt={activeItem.name} className="max-w-full max-h-full object-contain rounded" />
+                      <img src={resolveImageUrl(activeItem.image_url)} alt={activeItem.name} className="max-w-full max-h-full object-contain rounded" />
                     ) : (
                       <div className="text-arena-textMuted text-xs font-mono uppercase tracking-widest">// DATA LINK LINKING...</div>
                     )}

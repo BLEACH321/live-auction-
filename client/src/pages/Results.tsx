@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Trophy, Award, List, RefreshCw } from 'lucide-react';
 
-import { API_URL } from '../config';
+import { API_URL, resolveImageUrl } from '../config';
 
 interface SoldItem {
   id: number;
@@ -156,7 +156,7 @@ export const Results: React.FC = () => {
                 <div key={item.id} className="p-3 bg-arena-bg rounded border border-arena-border flex justify-between items-center text-xs">
                   <div className="flex items-center gap-3">
                     {item.image_url && (
-                      <img src={item.image_url} alt="" className="w-10 h-10 object-cover rounded border border-arena-border" />
+                      <img src={resolveImageUrl(item.image_url)} alt="" className="w-10 h-10 object-cover rounded border border-arena-border" />
                     )}
                     <div>
                       <h4 className="font-bold text-slate-200 text-sm uppercase">{item.name}</h4>
